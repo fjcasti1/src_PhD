@@ -1,0 +1,26 @@
+'Bo100_Re100_Ro0e0_wf10e-3'     ! prefix for filenames
+'NONE'    ! name of restart file
+100       ! BOUSSINESQ
+100       ! REYNOLDS      Omega*R^2/nu
+0d0       ! ROSSBY        Omega/Omega
+10d-3     ! wf            Frequency of the sin(wot) function
+1d0       ! GAMMA         H/R=Height/Radius (aspect ratio)
+1d-2      ! reg           Discontinuous boundary conditions regularization
+100       ! NtsT          Number of samples for each period (used to get dt)
+10        ! NT            Number of time periods (or time-steps, if wf=0 or Ro=0)
+10        ! Nsaves        Write Nsaves full solutions (used to calculate insec)
+10        ! itseries      Write in time-series-files every itseries time-steps
+1         ! init_file     Number of first output file
+0         ! iaxisym = m:
+          !   m = 0 Axisymmetric Subspace
+          !   m = 1 Full 3D Solution
+          !   m > 1 m-Fourier subspace
+          !   m < 0 |m|-rotoreflection
+0         ! ibegin:
+             -1 Start from solid body rotation + pert, set t=0. NOT WORKING
+              0 Start from rest with random perturbation, set t=0.
+              1 Continue restart solution, set t=0.
+              2 Continue restart solution, keep t.
+              3 Continue restart sol. with random pert., set t=0.
+0         ! imode         Azimuthal mode to be perturbed
+0d-12     ! pert          Amplitude of the vz perturbation
