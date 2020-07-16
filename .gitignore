@@ -1,5 +1,6 @@
 ts*
 Bo*
+*.vtk
 results/*
 log/*
 job_recs/*
