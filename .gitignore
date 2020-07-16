@@ -1,0 +1,10 @@
+ts*
+Bo*
+results/*
+log/*
+job_recs/*
+bin/*
+fig/*
+movies/*
+*.pyc
+*cpython*.so
