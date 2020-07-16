@@ -1,0 +1,31 @@
+100 ! nrp
+100 ! nzp
+0 ! ntp
+1000    ! i0mode [ +m: 0+m | -m: m | +1000: all modes | -1000: all modes but 0 ]
+   1  1  0  0  0  0  0  0  0  0  0  0  [0 not plotted, 1 plotted]
+! vr vt vz wr wt wz rv ke he sf vx vy
+! ------------------------------------------------------------------------------
+! WARNING: be sure the subdirectory movie/ exists!!!
+! ------------------------------------------------------------------------------
+! list of files to be processed:          !a blank line interrupts the execution
+restarts/Bo5e2_Re4000_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4100_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4200_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4300_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4400_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4500_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4600_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4700_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4800_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re4900_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5000_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5100_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5200_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5300_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5400_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5500_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5600_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5700_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5800_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re5900_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
+restarts/Bo5e2_Re6000_Ro0e-2_wf00e-3_Gamma100e-2_eta50e-2_mode000_pert000_0020
