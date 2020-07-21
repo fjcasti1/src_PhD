@@ -102,7 +102,7 @@ def main(f,fields,clips,fb,Gamma):
     generating the vtk files.
     '''
 
-    os.system("./myParaview < pv_input &")
+    os.system("./bin/myParaview < pv_input")
 
 
     return None
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     with open('pv_input','w') as f:
         f.write(pv_input)
         f.close()
-    os.system("./myParaview < pv_input")
+    os.system("./bin/myParaview < pv_input")
 
 
 #    NPROCS = 4
