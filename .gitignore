@@ -9,3 +9,4 @@ fig/*
 movies/*
 *.pyc
 *cpython*.so
+pv_input
