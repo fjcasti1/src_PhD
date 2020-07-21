@@ -23,8 +23,8 @@ def get_args():
             help='Base size of the figure',default=4)
     parser.add_argument('-g','--gamma',dest='Gamma', type=float,
             help='Aspect ratio of figure: Height/Lenth',default=1)
-    parser.add_argument('-c','--create',action='store_true',
-            help='Aspect ratio of figure: Height/Lenth',default=False)
+    #parser.add_argument('-c','--create',action='store_true',
+            #help='Aspect ratio of figure: Height/Lenth',default=False)
     args = parser.parse_args()
 
     fields = args.Fields.split(',')
@@ -92,7 +92,7 @@ def main(f,fields,clips,fb,Gamma):
 if __name__ == '__main__':
     DataFilePath,fields,clips,figBaseSize,Gamma,create = get_args()
 
-    if create: os.system("./myParaview < pv_input &")
+#    if create: os.system("./myParaview < pv_input &")
 
 
     if len(fields) is not len(clips):
