@@ -301,7 +301,8 @@ subroutine writevtk(pa,nrp,nzp,ntp,chf)
 
 ! Find min/max for each computed field and print result
   nrzt=(nrp+1)*(nzp+1)*(ntp+1)
-  call dminmax(pa,nrzt,fmin,fmax)
+  fmin = MINVAL(pa)
+  fmax = MAXVAL(pa)
   print *, chf, ' min, max: ', fmin, fmax
   write(LOG_UNIT,*) chf, ' min, max: ', fmin, fmax
 
@@ -843,22 +844,6 @@ subroutine velvort(nr,nx,nz,nn,vr,vt,vz,r,dr1,dz1, &
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   return
 end subroutine velvort
-
-!=======================================================================
-
-subroutine dminmax(f,ndim,fmin,fmax)
-  implicit none
-  integer, parameter :: dp=kind(0d0)
-  integer  :: i, ndim
-  real(dp) :: f(ndim), fmin, fmax
-
-  fmin=f(1) ; fmax=f(1)
-  do i=2,ndim
-    fmin = min(fmin,f(i))
-    fmax = max(fmax,f(i))
-  enddo
-  return
-end subroutine dminmax
 
 !=======================================================================
 
