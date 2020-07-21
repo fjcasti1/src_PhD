@@ -19,7 +19,7 @@ module purge
 module load intel/2019.4
 
 prefix=reader
-prefix=myParaview2
+prefix=myParaview
 opts=(
   ${prefix}.F90     # Fortran file to compile
   -m ${prefix}      # Resultant module file
