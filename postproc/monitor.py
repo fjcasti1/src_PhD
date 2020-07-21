@@ -103,9 +103,11 @@ def plotter(fields,fig_dir):
 ## Plot Kinetic Energy Modes ##
     for i in range(size(Ekm,1)):
         if max(Ekm[:,i]>LEGEND_THRESHOLD):
-            axes[0,0].semilogy(t[-M::10],Ekm[-M::10,i],color=colors[i],label=f'$E_{{{i:d}}}$')
+            #axes[0,0].semilogy(t[-M::10],Ekm[-M::10,i],color=colors[i],label=f'$E_{{{i:d}}}$')
+            axes[0,0].plot(t[-M::10],Ekm[-M::10,i],color=colors[i],label=f'$E_{{{i:d}}}$')
         else:
-            axes[0,0].semilogy(t[-M::10],Ekm[-M::10,i],color=colors[i])
+            #axes[0,0].semilogy(t[-M::10],Ekm[-M::10,i],color=colors[i])
+            axes[0,0].plot(t[-M::10],Ekm[-M::10,i],color=colors[i])
 
     axes[0,0].grid()
     axes[0,0].set_xlabel(rf'$\Omega_0 t$',fontsize=labelsize,labelpad=labelpadx)
