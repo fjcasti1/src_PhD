@@ -1,6 +1,6 @@
 # Objects
-#OBJSdef = in_out.o myParaview2.o
-OBJSdef = myParaview2.o
+#OBJSdef = in_out.o myParaview.o
+OBJSdef = myParaview.o
 OBJS90 = myParaview90.o
 OBJS77 = myParaview77.o
 OBJScyl = cyl_paraview.o
@@ -22,7 +22,7 @@ LIBPLP = -lplplotd -lplplotf77d -lplplotf77cd
 .PHONY: clean
 
 # default rule
-myParaview2: $(OBJSdef)
+myParaview: $(OBJSdef)
 	module purge; \
 	module load intel/2019.4; \
 	$(FC) $(FLG) $(OBJSdef) $(LIB) -o ./$@
@@ -48,7 +48,7 @@ in_out.o: in_out.F90
 	module load intel/2019.4; \
 	$(FC) $(FLG) -c $<
 
-myParaview2.o: myParaview2.F90
+myParaview.o: myParaview.F90
 	module purge; \
 	module load intel/2019.4; \
 	$(FC) $(FLG) -c $<
