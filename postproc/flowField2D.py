@@ -23,6 +23,9 @@ def get_args():
             help='Base size of the figure',default=4)
     parser.add_argument('-g','--gamma',dest='Gamma', type=float,
             help='Aspect ratio of figure: Height/Lenth',default=1)
+    parser.add_argument('-m','--max',dest='gma', type=float,
+            help='Global absolute maximum. gma = max(abs(f)) where f is the \
+            field')
     #parser.add_argument('-c','--create',action='store_true',
             #help='Aspect ratio of figure: Height/Lenth',default=False)
     args = parser.parse_args()
@@ -32,7 +35,7 @@ def get_args():
     clips = list(map(float, clips))
 
     return args.DataFilePath,fields,clips,\
-        args.figBaseSize,args.Gamma,args.create
+        args.figBaseSize,args.Gamma,args.gma
 
 def get_files_to_plot(DataFilePath):
     drecs = []
@@ -51,8 +54,9 @@ def get_files_to_plot(DataFilePath):
     drecs.sort()
     return drecs
 
-def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=1,Nell=33,Nred=3):
-    gma = abs(field).max()
+def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=1,Nell=33,Nred=3,gma=None):
+    if not gma: # Calculate abolute maximum if gma not specified
+        gma = abs(field).max()
     ell = clip*pylab.linspace(-1,1,Nell)*gma
     red = pylab.linspace(clip*gma,gma,Nred)
     blu = -red[::-1]
@@ -64,7 +68,7 @@ def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=1,Nell=33,Nred=3):
     #    contour(X,Y,field,levels=[0],linestyles='-',colors='#777777')
     return None
 
-def main(f,fields,clips,fb,Gamma):
+def main(f,fields,clips,fb,Gamma,gma):
     '''
     Generates a figure of size (figBaseSize,Gamma*figBaseSize) with 1 axes
     The axes and the box around the figure are not visible
@@ -84,16 +88,15 @@ def main(f,fields,clips,fb,Gamma):
         print('Read restart') #TODO
 
     for i in range(len(fields)):
-        mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=Gamma)
+        mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=Gamma,gma=gma)
         plt.savefig(outDir+fields[i]+'_'+bn.split('.')[0]+'.png')
         plt.close()
     return None
 
 if __name__ == '__main__':
-    DataFilePath,fields,clips,figBaseSize,Gamma,create = get_args()
+    DataFilePath,fields,clips,figBaseSize,Gamma,gma = get_args()
 
 #    if create: os.system("./myParaview < pv_input &")
-
 
     if len(fields) is not len(clips):
         print('\nThe lists Fields and Clips must have the same lenth.')
@@ -108,7 +111,7 @@ if __name__ == '__main__':
       mkl_set_num_threads(NPROCS)
       pool = mp.Pool(processes=NPROCS)
       D  = partial(main,fields=fields,clips=clips,
-              fb=figBaseSize,Gamma=Gamma)
+              fb=figBaseSize,Gamma=Gamma,gma=gma)
       DD = pool.map(D,drecs)
     else:
       for drec in drecs:
