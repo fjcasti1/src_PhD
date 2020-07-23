@@ -25,7 +25,7 @@ LIBPLP = -lplplotd -lplplotf77d -lplplotf77cd
 myParaview: $(OBJSdef)
 	module purge; \
 	module load intel/2019.4; \
-	$(FC) $(FLG) $(OBJSdef) $(LIB) -o ./$@
+	$(FC) $(FLG) $(OBJSdef) $(LIB) -o ../../bin/$@
 
 pv90: $(OBJS90)
 	module purge; \
