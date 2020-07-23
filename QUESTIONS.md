@@ -7,13 +7,17 @@ domain [-Gamma/2,Gamma/2] in the VTK file. Correct?
 
 ### Erase one loop
 From:
-`     do i=1,nr
+```
+     do i=1,nr
        ftilde(i,2*k  )   = f(i,0,2*k  )
      enddo
      ! Solve
      call dgetrs('N',nr,1,Mtilde(1,1,1),nr,ipiv1,
-&     ftilde(1,2*k  ),nr,info)`
+&     ftilde(1,2*k  ),nr,info)
+```
 To:
-`     ! Solve
+```
+     ! Solve
      call dgetrs('N',nr,1,Mtilde(1,1,1),nr,ipiv1,
-&     f(1,0,2*k  ),nr,info)`
+&     f(1,0,2*k  ),nr,info)
+```
