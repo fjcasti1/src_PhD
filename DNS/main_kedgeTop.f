@@ -183,7 +183,7 @@ c---- First, no-slip conditions in all boundaries, in all Fourier modes
       do k=0,nn-1
          do i=0,nr
             vr(i,0,k)=0d0; vz(i,0,k)=0d0 ! Top
-c            vr(i,0,k)=0d0; vt(i,0,k)=0d0; vz(i,0,k)=0d0 ! Top
+c           vt(i,0,k) specified below
             vr(i,nz,k)=0d0; vt(i,nz,k)=0d0; vz(i,nz,k)=0d0 !Bottom
          enddo
          do j=1,nz-1
