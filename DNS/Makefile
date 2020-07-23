@@ -1,6 +1,7 @@
 # Objects
-OBJS_unifTop  = spectral_tools_cyl.o main_unifTop.o
-OBJS_kedgeTop = spectral_tools_cyl.o main_kedgeTop.o
+OBJS_unifTop     = spectral_tools_cyl.o main_unifTop.o
+OBJS_freeSurfTop = spectral_tools_cyl.o main_freeSurfTop.o
+OBJS_kedgeTop    = spectral_tools_cyl.o main_kedgeTop.o
 
 # Compiler and flags
 FC  = ifort
@@ -18,6 +19,11 @@ LIBPLP = -lplplotd -lplplotf77d -lplplotf77cd
 .PHONY: clean
 
 # default rule
+main_freeSurfTop: $(OBJS_freeSurfTop)
+	module purge; \
+	module load intel/2019.4; \
+	$(FC) $(FLG) $(OBJS_freeSurfTop) $(LIB) -o ../../bin/$@
+
 main_kedgeTop: $(OBJS_kedgeTop)
 	module purge; \
 	module load intel/2019.4; \
