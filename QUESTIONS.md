@@ -7,7 +7,7 @@ domain [-Gamma/2,Gamma/2] in the VTK file. Correct?
 
 ### Erase one loop in freeSurfaceTop.f
 From:
-```
+```Fortran
      do i=1,nr
        ftilde(i,2*k  )   = f(i,0,2*k  )
      enddo
@@ -16,7 +16,7 @@ From:
 &     ftilde(1,2*k  ),nr,info)
 ```
 To:
-```
+```Fortran
      ! Solve
      call dgetrs('N',nr,1,Mtilde(1,1,1),nr,ipiv1,
 &     f(1,0,2*k  ),nr,info)
@@ -24,7 +24,7 @@ To:
 
 ### Regularization of vt bottom/side-walls in freeSurfTop.f
 From:
-```
+```Fortran
 c   Bottom lid: Uniform rotation with rate Omega=1+Ro*sin(wf*t) rad/s
 
     do i=0,nr
@@ -42,7 +42,7 @@ c   contuniuity
     enddo
 ```
 To:
-```
+```Fortran
 c   Bottom lid: Uniform rotation with rate Omega=1+Ro*sin(wf*t) rad/s
 
     do i=0,nr
