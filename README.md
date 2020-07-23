@@ -1,2 +1,2 @@
 # src_PhD
-Source code for the Knife Edge problem using spectral methods. Includes DNS and postprocessing source codes.
+Source code for the different problems to solve during PhD. Includes DNS and postprocessing source codes.
