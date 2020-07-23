@@ -12,9 +12,8 @@ c     nmax is needed in work arrays in spectral_tools.
       real*8 dx1(0:nx,0:nx)  , dx2(0:nx,0:nx)
       real*8 dz1(0:nz,0:nz)  , dz2(0:nz,0:nz)
       real*8 dr1(0:nr,0:nr,2), dr2(0:nr,0:nr,2),
-     & lap(0:nr,0:nr,2), MM(0:nr,0:nr,2), Mtilde(1:nr-1,1:nr-1,2)
+     & lap(0:nr,0:nr,2), MM(0:nr,0:nr,2), Mtilde(1:nr,1:nr,2)
       real*8 x(0:nx),z(0:nz),r(0:nr),ri(0:nr),riq(0:nr)
-      integer i_eta
 C     x(i)=r(i)=cos(pi*i/nx) but with different dimensions.
 C     rphys(i)=rad*r(i)=r(i); ri(i)=1d0/r(i)
 C     z(i)=cos(pi*i/nz); zphys(i)=alt*(1+z(i))/2=gama*(1+z(i))/2
@@ -76,21 +75,18 @@ c     wkdiag is a workspace, changed on exit; it is reset after call mdiag
 c       Calculate analytical surface azimuthal velocity, vs
         call infBoussinesqBC(vs,eta,r,nr)
       else
-C       Knife Edge placement in an specific node,
-C         find the closest node to r = eta
-        call KEplacement(i_eta,eta,r,nr)
 c       Reduce matrix MM for top boundary condition, because of known velocities
-        call ReduceBCMatrix(nr,i_eta,MM,Mtilde)
+        call ReduceBCMatrix(nr,MM,Mtilde)
 c       Perform LU factorization of Mtilde. Mtilde replaced by LU. Need
 c       ipiv to solve the system with dgetrs
         print *, 'LU Factorization of Mtilde'
-        call dgetrf(nr-1,nr-1,Mtilde(1,1,1),nr-1,ipiv1,info)
+        call dgetrf(nr,nr,Mtilde(1,1,1),nr,ipiv1,info)
         print *, 'info1 = ',info
         if (info /= 0) then
           print *, 'info1 = ',info
           stop
         endif
-        call dgetrf(nr-1,nr-1,Mtilde(1,1,2),nr-1,ipiv2,info)
+        call dgetrf(nr,nr,Mtilde(1,1,2),nr,ipiv2,info)
         print *, 'info2 = ',info
         if (info /= 0) then
           print *, 'info2 = ',info
@@ -113,10 +109,10 @@ C     Advancing in time
 c     stage(1) is the solution at N, stage(2) at N-1
          call time_stepper(Bo,Re,Ro,wf,dt,pnu,rad,alt,
      &        stage,tps,tdr,tir,tdi,tii,wk,dz1,dz2,nr,nz,nn,
-     &        dr1,lap,MM,Mtilde,ipiv1,ipiv2,z,r,ri,
+     &        dr1,lap,Mtilde,ipiv1,ipiv2,z,r,ri,
      &        axd,vxd,bxd,azd,vzd,bzd,axn,vxn,bxn,azn,vzn,bzn,
      &        cx01,cx03,cz01,cz02,cz03,cz11,cz12,cz13,
-     &        vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr,vs,i_eta)
+     &        vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr,vs)
 c     stage(1) is the solution at N, stage(2) at N+1
          stage(1)=stage(2) ; stage(2)=3-stage(1)
 c     stage(1) is the solution at N+1, stage(2) at N
@@ -162,44 +158,54 @@ c      close(OUT_TSTXT_UNIT)
 
 c=======================================================================
 
-      subroutine bcvel(tps,r,vr,vt,vz,rad,alt,
+      subroutine bcvel(tps,r,z,vr,vt,vz,rad,alt,
      &          nr,nz,nn,Bo,Re,Ro,wf,pnu,dz1,
-     &          MM,Mtilde,ipiv1,ipiv2,vs,i_eta)
+     &          Mtilde,ipiv1,ipiv2,vs)
       implicit none
-      integer nr,nz,nn,i,j,k,info,i_eta
+      integer nr,nz,nn,i,j,k,info
       real*8 r(0:nr),tps
       real*8 vr(0:nr,0:nz,0:nn-1),vt(0:nr,0:nz,0:nn-1)
       real*8 vz(0:nr,0:nz,0:nn-1),vs(0:nr)
-      real*8 dz1(0:nz,0:nz)
-      real*8 rad,alt,alpha,Bo,Re,Ro,wf,pnu
-      real*8 v_KE(0:nn-1) ! One for each mode
-      real*8 MM(0:nr,0:nr,2),f(0:nr,0:nz,0:nn-1)
-      real*8 Mtilde(1:nr-1,1:nr-1,2), ftilde(1:nr-1,0:nn-1)
+      real*8 z(0:nz),dz1(0:nz,0:nz)
+      real*8 rad,alt,alpha,Bo,Re,Ro,wf,pnu,mu,reg
+      real*8 f(0:nr,0:nz,0:nn-1)
+      real*8 Mtilde(1:nr,1:nr,2), ftilde(1:nr,0:nn-1)
       integer ipiv1(1:nr-1),ipiv2(1:nr-1)
 
 c     r(i)=cos(pi*i/nx) in (0,1], radial collocation points
 
-c---- First, no-slip conditions in all boundaries, in all Fourier modes
+c---- First, no-slip boundary conditions everywhere, in all Fourier modes
       do k=0,nn-1
          do i=0,nr
-            vr(i,0,k)=0d0; vz(i,0,k)=0d0 ! Top
-c            vr(i,0,k)=0d0; vt(i,0,k)=0d0; vz(i,0,k)=0d0 ! Top
-            vr(i,nz,k)=0d0; vt(i,nz,k)=0d0; vz(i,nz,k)=0d0 !Bottom
+            vr(i,0,k)=0.d0; vt(i,0,k)=0.d0; vz(i,0,k)=0.d0 ! Top
+            vr(i,nz,k)=0.d0; vt(i,nz,k)=0.d0; vz(i,nz,k)=0.d0 !Bottom
          enddo
          do j=1,nz-1
-            vr(0,j,k)=0d0; vt(0,j,k)=0d0; vz(0,j,k)=0d0 ! Sidewall
+            vr(0,j,k)=0.d0; vt(0,j,k)=0.d0; vz(0,j,k)=0.d0 ! Sidewall
          enddo
       enddo
-!      do k=1,nn-1
-!         do i=0,nr
-!            vt(i,0,k)=0d0 ! Top, not the 0-mode
-!         enddo
-!      enddo
 
 c---- Now, the non-zero boundary conditions
 
+c     Bottom lid: Uniform rotation with rate Omega=1+Ro*sin(wf*t) rad/s
+      do i=0,nr
+         vt(i,nz,0)=-r(i)*(pnu*Re/rad)*(1d0+Ro*dsin(wf*tps))
+      enddo
+c     Side wall: no-slip BC with a gaussian regularization to mantain
+c     contuniuity
+      mu  = -alt ! Center of the Gaussian
+      reg = 1d-2
+      do j=1,nz-1
+         vt(0,j,0)=-(pnu*Re/rad)*(1d0+Ro*dsin(wf*tps))*
+     &               dexp(-(z(j)-mu)**2d0/(2d0*reg**2d0))
+      enddo
+
+c     Top lid: Free surface stress balance
       if (Bo == 0d0) then ! Bo is infinite, marked as zero for convenience
-                 ! vs: Knife Edge Analytical Boundary Condition for Bo = 0
+        ! vs: Analytical Boundary Condition for Bo = Inf
+!-------------------------------
+!   TODO: Need to check vs(r)
+!-------------------------------
         do i=0,nr
           vt(i,0,0)=-(pnu*Re/rad)*vs(i)
         enddo
@@ -216,11 +222,6 @@ c---- Now, the non-zero boundary conditions
      &         dz1(0,0),nz+1,0.d0,f(0,0,k),nr+1)
         enddo
 
-        ! Set up the KE azimuthal velocity for each mode
-        v_KE(0) = -(pnu*Re/rad)*r(i_eta)*(1+Ro*dsin(wf*tps))
-        do k=1,nn-1
-          v_KE(k) = 0d0
-        enddo
         ! Set up the reduced RHS and solve the system for each mode.
         ! Reassemble the vector at the end, for each mode.
         ! Since v_theta is an odd function, we use odd derivatives for the
@@ -229,23 +230,19 @@ c---- Now, the non-zero boundary conditions
         ! is even, mode 2 is odd ...
         do k=0,(nn-2)/2
           ! reduced RHS, even modes -> odd derivatives & viceversa
-          do i=1,i_eta-1
-            ftilde(i,2*k  )   = f(i,0,2*k  ) - MM(i,i_eta,1)*v_KE(2*k  )
-            ftilde(i,2*k+1)   = f(i,0,2*k+1) - MM(i,i_eta,2)*v_KE(2*k+1)
-          enddo
-          do i=i_eta+1,nr
-            ftilde(i-1,2*k  ) = f(i,0,2*k  ) - MM(i,i_eta,1)*v_KE(2*k  )
-            ftilde(i-1,2*k+1) = f(i,0,2*k+1) - MM(i,i_eta,2)*v_KE(2*k+1)
+          do i=1,nr
+            ftilde(i,2*k  )   = f(i,0,2*k  )
+            ftilde(i,2*k+1)   = f(i,0,2*k+1)
           enddo
           ! Solve
-          call dgetrs('N',nr-1,1,Mtilde(1,1,1),nr-1,ipiv1,
-     &     ftilde(1,2*k  ),nr-1,info)
+          call dgetrs('N',nr,1,Mtilde(1,1,1),nr,ipiv1,
+     &     ftilde(1,2*k  ),nr,info)
           if (info /= 0) then
             print *, 'info1 = ',info
             stop
           endif
-          call dgetrs('N',nr-1,1,Mtilde(1,1,2),nr-1,ipiv2,
-     &     ftilde(1,2*k+1),nr-1,info)
+          call dgetrs('N',nr,1,Mtilde(1,1,2),nr,ipiv2,
+     &     ftilde(1,2*k+1),nr,info)
           if (info /= 0) then
             print *, 'info2 = ',info
             stop
@@ -253,19 +250,12 @@ c---- Now, the non-zero boundary conditions
           ! Reassemble
           vt(0,0,2*k  ) = 0d0
           vt(0,0,2*k+1) = 0d0
-          do i=1,i_eta-1
+          do i=1,nr
             vt(i,0,2*k  ) = ftilde(i,2*k  )
             vt(i,0,2*k+1) = ftilde(i,2*k+1)
           enddo
-          vt(i_eta,0,2*k  ) = v_KE(2*k  )
-          vt(i_eta,0,2*k+1) = v_KE(2*k+1)
-          do i=i_eta+1,nr
-            vt(i,0,2*k  ) = ftilde(i-1,2*k  )
-            vt(i,0,2*k+1) = ftilde(i-1,2*k+1)
-          enddo
         enddo
       endif
-
       return
       end subroutine bcvel
 
@@ -298,31 +288,17 @@ c                  -1 because the counter starts at 1, should start at 0
       return
       end subroutine KEplacement
 
-      subroutine ReduceBCMatrix(nr,i_eta,MM,Mtilde)
+      subroutine ReduceBCMatrix(nr,MM,Mtilde)
       implicit none
-      integer, intent(in)  :: i_eta,nr
+      integer, intent(in)  :: nr
       real*8,  intent(in)  :: MM(0:nr,0:nr,2)
-      real*8,  intent(out) :: Mtilde(1:nr-1,1:nr-1,2)
+      real*8,  intent(out) :: Mtilde(1:nr,1:nr,2)
       integer :: i,j
 
-      do i=1,i_eta-1
-        do j=1,i_eta-1
+      do i=1,nr
+        do j=1,nr
           Mtilde(i,j,1) = MM(i,j,1)
           Mtilde(i,j,2) = MM(i,j,2)
-        enddo
-        do j=i_eta+1,nr
-          Mtilde(i,j-1,1) = MM(i,j,1)
-          Mtilde(i,j-1,2) = MM(i,j,2)
-        enddo
-      enddo
-      do i=i_eta+1,nr
-        do j=1,i_eta-1
-          Mtilde(i-1,j,1) = MM(i,j,1)
-          Mtilde(i-1,j,2) = MM(i,j,2)
-        enddo
-        do j=i_eta+1,nr
-          Mtilde(i-1,j-1,1) = MM(i,j,1)
-          Mtilde(i-1,j-1,2) = MM(i,j,2)
         enddo
       enddo
       return
@@ -1108,17 +1084,17 @@ c=======================================================================
 
       subroutine time_stepper(Bo,Re,Ro,wf,dt,pnu,rad,alt,
      &     stage,tps,tdr,tir,tdi,tii,wk,dz1,dz2,nr,nz,nn,
-     &     dr1,lap,MM,Mtilde,ipiv1,ipiv2,z,r,ri,
+     &     dr1,lap,Mtilde,ipiv1,ipiv2,z,r,ri,
      &     axd,vxd,bxd,azd,vzd,bzd,axn,vxn,bxn,azn,vzn,bzn,
      &     cx01,cx03,cz01,cz02,cz03,cz11,cz12,cz13,
-     &     vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr,vs,i_eta)
+     &     vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr,vs)
 c     stage(1) points to N, stage(2) points to N-1 on input, the opposite on output
       implicit none
-      integer nr,nz,nn,nnh,nnhp,nn1,nr1,nz1,i_eta
+      integer nr,nz,nn,nnh,nnhp,nn1,nr1,nz1
       integer stage(2),i,j,k,nrz,nrzt,nzt,n
       real*8  dz1(0:nz,0:nz),dr1(0:nr,0:nr,2)
       real*8  dz2(0:nz,0:nz)
-      real*8  lap(0:nr,0:nr,2),MM(0:nr,0:nr,2),Mtilde(1:nr-1,1:nr-1,2)
+      real*8  lap(0:nr,0:nr,2),Mtilde(1:nr,1:nr,2)
       real*8  z(0:nz),r(0:nr),ri(0:nr)
       real*8  axd(1:nr,1:nr,0:nn/2+1),vxd(1:nr,0:nn/2+1),
      &        bxd(1:nr,1:nr,0:nn/2+1),axn(1:nr,1:nr,0:nn/2+1),
@@ -1333,9 +1309,9 @@ c
 c**************************************************************************
 
 c     boundary conditions for the velocity field
-      call bcvel(tps,r,wk(0,0,0,4),wk(0,0,0,6),wk(0,0,0,3),rad,alt,
+      call bcvel(tps,r,z,wk(0,0,0,4),wk(0,0,0,6),wk(0,0,0,3),rad,alt,
      &          nr,nz,nn,Bo,Re,Ro,wf,pnu,dz1,
-     &          MM,Mtilde,ipiv1,ipiv2,vs,i_eta)
+     &          Mtilde,ipiv1,ipiv2,vs)
 !$OMP PARALLEL
 !$OMP+SHARED(alpha,wk)
 !$OMP+PRIVATE(n,i)
