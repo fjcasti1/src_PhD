@@ -1,12 +1,5 @@
-ts*
-Bo*
-*.vtk
-results/*
-log/*
-job_recs/*
-bin/*
-fig/*
-movies/*
 *.pyc
 *cpython*.so
 pv_input
+*genmod*
+DNS/*.o
