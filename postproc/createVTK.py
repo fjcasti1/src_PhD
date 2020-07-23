@@ -102,7 +102,7 @@ def main(f,fields,clips,fb,Gamma):
     generating the vtk files.
     '''
 
-    os.system("./bin/myParaview < pv_input")
+    os.system("./bin/myParaview < pv_input &")
 
 
     return None
