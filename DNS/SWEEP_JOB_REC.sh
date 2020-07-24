@@ -135,7 +135,7 @@ my_job() {
     printf "Plotting timeseries for ${prefix}\n"
     ts_rec="${res_dir}ts_${prefix}"
     pycmd=$HOME/.local/opt/anaconda/bin/python
-    $pycmd src/postproc/monitor.py "${ts_rec}" "${res_dir}" "${dt}"
+    $pycmd src_PhD/postproc/monitor.py "${ts_rec}" "${res_dir}" "${dt}"
   fi
 }
 
