@@ -3,3 +3,4 @@
 pv_input
 *genmod*
 DNS/*.o
+postproc/*.o
