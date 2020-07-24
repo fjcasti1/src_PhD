@@ -6,7 +6,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer nr,nx,nz,nmax,nn,nnh,nnhp,nn1,nr1,nz1,nrpz
 c     nr, nz, nn all even; nn .ge. 2; nmax=max(nr,nz,nn)
 c     nmax is needed in work arrays in spectral_tools.
-      parameter(nr=100,nz=100,nn=32,nmax=100)
+      parameter(nr=100,nz=100,nn=2,nmax=100)
       parameter(nx=2*nr+1,nnh=nn/2,nnhp=nnh+1,nn1=nn-1)
       parameter(nr1=nr+1,nz1=nz+1,nrpz=nx+nz-2)
       real*8 dx1(0:nx,0:nx)  , dx2(0:nx,0:nx)
@@ -177,11 +177,11 @@ c     r(i)=cos(pi*i/nx) in (0,1], radial collocation points
 c---- First, no-slip boundary conditions everywhere, in all Fourier modes
       do k=0,nn-1
          do i=0,nr
-            vr(i,0,k)=0.d0; vt(i,0,k)=0.d0; vz(i,0,k)=0.d0 ! Top
-            vr(i,nz,k)=0.d0; vt(i,nz,k)=0.d0; vz(i,nz,k)=0.d0 !Bottom
+            vr(i,0,k)=0d0; vt(i,0,k)=0d0; vz(i,0,k)=0d0 ! Top
+            vr(i,nz,k)=0d0; vt(i,nz,k)=0d0; vz(i,nz,k)=0d0 !Bottom
          enddo
          do j=1,nz-1
-            vr(0,j,k)=0.d0; vt(0,j,k)=0.d0; vz(0,j,k)=0.d0 ! Sidewall
+            vr(0,j,k)=0d0; vt(0,j,k)=0d0; vz(0,j,k)=0d0 ! Sidewall
          enddo
       enddo
 
