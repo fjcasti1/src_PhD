@@ -41,22 +41,22 @@ trapped() {
 input_gen() {
   prefix="${1:?input_gen: PREFIX NOT PASSED}"
   restart="${2:?input_gen: RESTART NOT PASSED}"
-  gamma="${3:?input_gen: GAMMA NOT PASSED}"
-  eta="${4:?input_gen: ETA NOT PASSED}"
-  NtsT="${5:?input_gen: NtsT NOT PASSED}"
-  NT="${6:?input_gen: NT NOT PASSED}"
-  Nsaves="${7:?input_gen: NSAVES NOT PASSED}"
-  itseries="${8:?input_gen: ITSERIES NOT PASSED}"
-  init_file="${9:?input_gen: INIT_FILE NOT PASSED}"
-  iaxisym="${10:?input_gen: IAXISYM NOT PASSED}"
-  ibegin="${11:?input_gen: IBEGIN NOT PASSED}"
-  imode="${12:?input_gen: IMODE NOT PASSED}"
-  pert="${13:?input_gen: PERT NOT PASSED}"
-  out_rec="${14:?input_gen: OUT_REC NOT PASSED}"
+  NtsT="${3:?input_gen: NtsT NOT PASSED}"
+  NT="${4:?input_gen: NT NOT PASSED}"
+  Nsaves="${5:?input_gen: NSAVES NOT PASSED}"
+  itseries="${6:?input_gen: ITSERIES NOT PASSED}"
+  init_file="${7:?input_gen: INIT_FILE NOT PASSED}"
+  iaxisym="${8:?input_gen: IAXISYM NOT PASSED}"
+  ibegin="${9:?input_gen: IBEGIN NOT PASSED}"
+  imode="${10:?input_gen: IMODE NOT PASSED}"
+  pert="${11:?input_gen: PERT NOT PASSED}"
+  out_rec="${12:?input_gen: OUT_REC NOT PASSED}"
   Bo=$(python -c "print('$prefix'.split('Bo')[-1].split('_')[0])")
   Re=$(python -c "print('$prefix'.split('Re')[-1].split('_')[0])")
   Ro=$(python -c "print('$prefix'.split('Ro')[-1].split('_')[0])")
   wf=$(python -c "print('$prefix'.split('wf')[-1].split('_')[0])")
+  gamma=$(python -c "print('$prefix'.split('Gamma')[-1].split('_')[0])")
+  eta=$(python -c "print('$prefix'.split('eta')[-1].split('_')[0])")
   cat >> $out_rec << __EOF
 '$prefix'     ! prefix for filenames
 '$restart'    ! name of restart file
@@ -93,7 +93,7 @@ my_job() {
   sourceFile="${2:?'SOURCEFILE MISSING'}"
   Bo="${3:?'BOUSSINESQ VAL MISSING'}"
   Re="${4:?'REYNOLDS VAL MISSING'}"
-  Ro="${5:?'REYNOLDS VAL MISSING'}"
+  Ro="${5:?'ROSSBY VAL MISSING'}"
   wf="${6:?'FORCING FREQ VAL MISSING'}"
   gamma="${7:?'GAMMA MISSING'}"
   eta="${8:?'ETA MISSING'}"
@@ -121,9 +121,8 @@ my_job() {
   printf "./bin/${sourceFile}\n"
   if [ $MODE == "DNS" ] || [ $MODE == "MOVIEDNS" ] || [ $MODE == "ALL" ]; then
     printf "Computing solution for ${prefix}\n"
-    ./bin/$sourceFile >> $out_rec < <(input_gen $prefix $RS $gamma\
-    $eta $NtsT $NT $Nsaves $itseries $init_file $iaxisym $ibegin $imode\
-    $pert $out_rec)
+    ./bin/$sourceFile >> $out_rec < <(input_gen $prefix $RS $NtsT\
+    $NT $Nsaves $itseries $init_file $iaxisym $ibegin $imode $pert $out_rec)
 
     if [ $MODE != "MOVIEDNS" ]; then
       mv ${prefix}*${Nsaves} "$res_dir"
