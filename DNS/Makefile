@@ -1,7 +1,8 @@
 # Objects
-OBJS_unifTop     = spectral_tools_cyl.o main_unifTop.o
-OBJS_freeSurfTop = spectral_tools_cyl.o main_freeSurfTop.o
-OBJS_kedgeTop    = spectral_tools_cyl.o main_kedgeTop.o
+OBJS_unifTop         = tools_spectral_cyl.o main_unifTop.o
+OBJS_kedgeTop        = tools_spectral_cyl.o main_kedgeTop.o
+OBJS_freeSurfTop     = tools_spectral_cyl.o main_freeSurfTop.o
+OBJS_freeSurfTop2DFD = tools_FD_cyl.o       main_freeSurfTop2DFD.o
 
 # Compiler and flags
 FC  = ifort
@@ -24,6 +25,11 @@ main_freeSurfTop: $(OBJS_freeSurfTop)
 	module load intel/2019.4; \
 	$(FC) $(FLG) $(OBJS_freeSurfTop) $(LIB) -o ../../bin/$@
 
+main_freeSurfTop2DFD: $(OBJS_freeSurfTop2DFD)
+	module purge; \
+	module load intel/2019.4; \
+	$(FC) $(FLG) $(OBJS_freeSurfTop2DFD) $(LIB) -o ../../bin/$@
+
 main_kedgeTop: $(OBJS_kedgeTop)
 	module purge; \
 	module load intel/2019.4; \
@@ -36,6 +42,11 @@ main_unifTop: $(OBJS_unifTop)
 	$(FC) $(FLG) $(OBJS_unifTop) $(LIB) -o ../../bin/$@
 # object rules
 %.o: %.f
+	module purge; \
+	module load intel/2019.4; \
+	$(FC) $(FLG) -c $<
+
+%.o: %.F90
 	module purge; \
 	module load intel/2019.4; \
 	$(FC) $(FLG) -c $<
