@@ -2,6 +2,7 @@
 OBJS_unifTop         = tools_spectral_cyl.o main_unifTop.o
 OBJS_kedgeTop        = tools_spectral_cyl.o main_kedgeTop.o
 OBJS_freeSurfTop     = tools_spectral_cyl.o main_freeSurfTop.o
+OBJS_kedgeTop2DFD    = tools_FD_cyl.o       main_kedgeTop2DFD.o
 OBJS_freeSurfTop2DFD = tools_FD_cyl.o       main_freeSurfTop2DFD.o
 
 # Compiler and flags
@@ -35,11 +36,16 @@ main_kedgeTop: $(OBJS_kedgeTop)
 	module load intel/2019.4; \
 	$(FC) $(FLG) $(OBJS_kedgeTop) $(LIB) -o ../../bin/$@
 
-# unifTop rule
+main_kedgeTop2DFD: $(OBJS_kedgeTop2DFD)
+	module purge; \
+	module load intel/2019.4; \
+	$(FC) $(FLG) $(OBJS_kedgeTop2DFD) $(LIB) -o ../../bin/$@
+
 main_unifTop: $(OBJS_unifTop)
 	module purge; \
 	module load intel/2019.4; \
 	$(FC) $(FLG) $(OBJS_unifTop) $(LIB) -o ../../bin/$@
+
 # object rules
 %.o: %.f
 	module purge; \
@@ -52,9 +58,8 @@ main_unifTop: $(OBJS_unifTop)
 	$(FC) $(FLG) -c $<
 
 clean:
-	rm -f $(OBJSdef)
 	rm -f intel_build.log
 	rm -f *.out
 	rm -f *.o
 	rm -f *.mod
-	rm -f *genmod*
+	rm -f *_genmod*
