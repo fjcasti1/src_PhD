@@ -6,6 +6,13 @@ partition="${4:?'PARTITION NOT SUPPLIED'}"
 MODE="${5:?'MODE NOT SUPPLIED'}"
 job_com="${6:-main}"
 
+if [ -x ${sourceFile} ]; then
+  echo "Running binary file ${sourceFile}"
+else
+  echo "ERROR 66 - INCORRECT BINARY FILE ${sourceFile}"
+  exit 66
+fi
+
 if [ $partition == "debug" ]; then
   echo "Partition = ${partition}. Needs -qos wildfire"
   qosLine="#SBATCH -q wildfire"
@@ -118,10 +125,10 @@ my_job() {
   out_rec="${res_dir}sweep_${prefix}.out"
   ! [[ -d "$res_dir" ]] && mkdir -p "$res_dir" || :
 
-  printf "./bin/${sourceFile}\n"
+  printf "Running binary file ${sourceFile}\n"
   if [ $MODE == "DNS" ] || [ $MODE == "MOVIEDNS" ] || [ $MODE == "ALL" ]; then
     printf "Computing solution for ${prefix}\n"
-    ./bin/$sourceFile >> $out_rec < <(input_gen $prefix $RS $NtsT\
+    $sourceFile >> $out_rec < <(input_gen $prefix $RS $NtsT\
     $NT $Nsaves $itseries $init_file $iaxisym $ibegin $imode $pert $out_rec)
 
     if [ $MODE != "MOVIEDNS" ]; then
