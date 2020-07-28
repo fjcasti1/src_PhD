@@ -1,4 +1,4 @@
-module FD_tools_cyl
+module tools_FD_cyl
   implicit none
 
   contains
@@ -401,4 +401,4 @@ module FD_tools_cyl
       close(10)
     end subroutine graphs
 
-end module FD_tools_cyl
+end module tools_FD_cyl
