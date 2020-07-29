@@ -54,16 +54,16 @@ def get_files_to_plot(DataFilePath):
     drecs.sort()
     return drecs
 
-def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=1,Nell=33,Nred=3,gma=None):
+def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=0,Nell=33,Nred=3,gma=None):
     if not gma: # Calculate abolute maximum if gma not specified
         gma = abs(field).max()
     ell = clip*pylab.linspace(-1,1,Nell)*gma
     red = pylab.linspace(clip*gma,gma,Nred)
     blu = -red[::-1]
     f,a = no_ax_fig(fn,fb,fgamma)
-    mycontourf(X,Y,field,lc='#777777',lw=1,levels=blu,cmap=myBlues)
-    mycontourf(X,Y,field,lc='#777777',lw=0,levels=ell,cmap=mycm15)
-    mycontourf(X,Y,field,lc='#777777',lw=1,levels=red,cmap=myReds)
+    mycontourf(X,Y,field,lc='#777777',lw=0.1,levels=blu,cmap=myBlues)
+    mycontourf(X,Y,field,lc='#777777',lw=0.1,levels=ell,cmap=mycm15)
+    mycontourf(X,Y,field,lc='#777777',lw=0.1,levels=red,cmap=myReds)
     #if field.min() < 0 and field.max() > 0:
     #    contour(X,Y,field,levels=[0],linestyles='-',colors='#777777')
     return None
