@@ -5,9 +5,9 @@ program knifeEdge
   integer  :: Nz, Nz1, Nr, Nr1, ned, ned1, Nsteps, nsaves
   integer  :: i, j, m, ix, irestart, ir
   integer  :: igraph, itseries, ibegin, init_file, info
-  real*8   :: Re, Re1, Bo, Bo1, beta, beta1, Ro, Ro1, f, f1, wf, wf1, simTU, NT, NtsT, T
-  real*8   :: Gama, eta, Gama1, eta1, Hasp, Rasp, dr, dr1, dz, dz1
-  real*8   :: time, oldtime, dt, dt1
+  real*8   :: Re, Re1, Bo, Bo1, beta, beta1, alpha, alpha1, f, f1, wf, wf1, simTU, NT, NtsT, T
+  real*8   :: Hasp, Hasp1, Rasp, Rasp1, dr, dr1, dz, dz1
+  real*8   :: time, oldtime, dt, dt1, xmax
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
   integer, dimension(:),   allocatable :: ipiv
   real*8,  dimension(:),   allocatable :: ldiag, mdiag, udiag
@@ -16,8 +16,9 @@ program knifeEdge
   real*8,  dimension(:,:), allocatable :: x, g, s, xtmp, gtmp
   real*8,  dimension(:,:), allocatable :: xrhs, grhs, DsDz, DsDr, DgDz, DgDr, ekk, egg, exx
   real*8,  dimension(:,:), allocatable :: L, D, B, P, Paux, Pinv, dumeig
-  character*128 :: prefix, restart, tfile
+  character*128 :: prefix, restart, fileout, tfile
   character*128 :: vfile ! Erase  this line
+  character*10 :: TSformat
   real*8, parameter :: PI = 4.d0*atan(1.0d0)
 
 ! Read parameters
@@ -25,14 +26,14 @@ program knifeEdge
   ix=index(prefix//' ',' ')-1
   read*, restart   ! name of restart file
   irestart=index(restart//' ',' ')-1
-  read*, Bo
   read*, Re
-  read*, Ro
+  read*, Bo
+  read*, alpha
   read*, wf
-  read*, Gama
-  read*, eta
-  read*, Nr
+  read*, Hasp
+  read*, Rasp
   read*, Nz
+  read*, Nr
   read*, ned
   read*, dt         ! Default dt if wf = 0
   read*, NtsT       ! Number of Time Steps per Period
@@ -43,27 +44,14 @@ program knifeEdge
   read*, init_file
   read*, ibegin     ! controls the start/restart process
 
-! Conversion from the spectral geometric formulation to the FD.
-! In the spectral case, we have defined the characteristic length to be R
-! instead of a. Hence, we need to apply the following two equations. We go
-! through that trouble to be able to match the values Gamma and eta from one
-! code to another and have the conversion to be made in the FD DNS, instead of
-! grabbing a piece of paper every time.
-! To be clear, the FD has different length scales, we only input the Gamma and
-! eta values for convenience, then they are transformed to Rasp, Hasp.
-! Gamma = H/R, eta  = a/R
-! Hasp  = H/a, Rasp = R/a
-  Rasp = 1d0/eta
-  Hasp = Gama/eta
-
-  beta = 1d0
+  beta = 1.d0
   dr= Rasp/(Nr-1)
   dz= Hasp/(Nz-1)
 
-  if (Ro.gt.0d0.AND.wf.gt.0d0) then  ! Forced system
+  if (alpha.gt.0d0.AND.wf.gt.0d0) then  ! Forced system
     T  = 2.d0*PI/wf
     dt = T/NtsT
-  elseif (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
+  elseif (alpha.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
     T  = 2.d0*PI/wf
     dt = T/NtsT
 !    Nsteps = CEILING(NT/dt)
@@ -80,20 +68,18 @@ program knifeEdge
   print *, 'restart:      ', restart
   print *, 'Re:           ', Re
   print *, 'Bo:           ', Bo
-  if (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
+  if (alpha.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
     print *, 'wf:           ', 0
   endif
   print *, 'wf:           ', wf
   print *, 'beta:         ', beta
-  print *, 'Ro:           ', Ro
-  print *, 'Gamma:        ', Gama
-  print *, 'eta:          ', eta
+  print *, 'alpha:        ', alpha
   print *, 'Hasp:         ', Hasp
   print *, 'Rasp:         ', Rasp
   print *, 'Nr:           ', Nr
   print *, 'Nz:           ', Nz
   print *, 'ned:          ', ned
-!  if (Ro.eq.0) then
+!  if (alpha.eq.0) then
 !    print *, 'dt:           ', dt
 !  endif
   print *, 'NtsT:         ', NtsT
@@ -107,10 +93,10 @@ program knifeEdge
   print *, 'Calculated:   '
   print *, 'dr:           ', dr
   print *, 'dz:           ', dz
-  if (Ro.eq.0d0.AND.wf.gt.0d0) then
+  if (alpha.eq.0d0.AND.wf.gt.0d0) then
     print *, 'Response Period:       ', T
     print *, 'dt:           ', dt
-  elseif (Ro.gt.0d0.AND.wf.gt.0d0) then
+  elseif (alpha.gt.0d0.AND.wf.gt.0d0) then
     print *, 'Forcing Period:       ', T
     print *, 'dt:           ', dt
   else
@@ -124,7 +110,7 @@ program knifeEdge
   print *, '======================================================='
   print *, ''
 
-  if (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
+  if (alpha.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
     wf = 0
   endif
   print*, 'Initializing Variables'
@@ -160,7 +146,7 @@ program knifeEdge
     open(unit=1,file=restart(1:irestart),status='old',&
         form='unformatted')
     read(1) Nz1,Nr1,ned1,dz1,dr1,dt1,oldtime
-    read(1) Re1,Bo1,beta1,Ro1,f1,wf1,Gama1,eta1
+    read(1) Re1,Bo1,beta1,alpha1,f1,wf1,Hasp1,Rasp1
     read(1) ((s(j,i),j=1,Nz),i=1,Nr),&
             ((x(j,i),j=1,Nz),i=1,Nr),&
             ((g(j,i),j=1,Nz),i=1,Nr)
@@ -211,7 +197,7 @@ program knifeEdge
   end do
 
   if (Bo == 0d0) then
-    call infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
+    call infBoussinesqBC(vs,ir,r,Nr,Rasp,regOpt)
     do i=1,Nr
       write(25,109) i, r(i), vs(i)
     enddo
@@ -242,8 +228,8 @@ program knifeEdge
       xtmp(2:Nz-1,2:Nr-1) = x(2:Nz-1,2:Nr-1) + dt*xrhs(2:Nz-1,2:Nr-1)
       gtmp(2:Nz-1,2:Nr-1) = g(2:Nz-1,2:Nr-1) + dt*grhs(2:Nz-1,2:Nr-1)
         !--call solve_streamfn(xtmp,s,r,dr,dz,L,D,Nz,Nr)
-      call solve_streamfn(xtmp,s,r,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(xtmp,gtmp,s,Bo,wf,beta,Ro,time,r,dr,dz,&
+      call solve_streamfn(xtmp,s,r,dr,dz,L,D,Nz,Nr,P,Pinv)
+      call BndConds(xtmp,gtmp,s,Bo,wf,beta,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
      !Second RK2 step
       !call rhsXG(xtmp,gtmp,s,Re,r,dr,dz,xrhs,grhs,Nz,Nr,DsDz,DsDr)
@@ -251,17 +237,18 @@ program knifeEdge
       x(2:Nz-1,2:Nr-1) = 0.5d0*(x(2:Nz-1,2:Nr-1) + xtmp(2:Nz-1,2:Nr-1) + dt*xrhs(2:Nz-1,2:Nr-1))
       g(2:Nz-1,2:Nr-1) = 0.5d0*(g(2:Nz-1,2:Nr-1) + gtmp(2:Nz-1,2:Nr-1) + dt*grhs(2:Nz-1,2:Nr-1))
         !--call solve_streamfn(x,s,r,dr,dz,L,D,Nz,Nr)
-      call solve_streamfn(x,s,r,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(x,g,s,Bo,wf,beta,Ro,time,r,dr,dz,&
+      call solve_streamfn(x,s,r,dr,dz,L,D,Nz,Nr,P,Pinv)
+      call BndConds(x,g,s,Bo,wf,beta,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !!      call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
       call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,s,g,x,r,DsDr,DsDz,DgDr,DgDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs(x,g,s,Re,Bo,beta,Ro,f,wf,Gama,eta,Nz,Nr,ned,dz,dr,&
+      call graphs(x,g,s,Re,Bo,beta,alpha,f,wf,Hasp,Rasp,Nz,Nr,ned,dz,dr,&
                                                    dt,time,prefix,ix,init_file)
     end if
     if (mod(m,itseries).eq.0) then
+      !xmax=maxval(maxval(x,1))
       write(15,100) time, Ek, Eg, Ex, ulr, ulv, ulz
     end if
   end do
