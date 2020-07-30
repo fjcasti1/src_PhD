@@ -7,7 +7,7 @@ program main_kedgeTop2DFD
   integer  :: igraph, itseries, ibegin, init_file, info
   real*8   :: Re, Re1, Bo, Bo1, beta, beta1, alpha, alpha1, f, f1, wf, wf1, simTU, NT, NtsT, T
   real*8   :: Gama, eta, Hasp, Hasp1, Rasp, Rasp1, dr, dr1, dz, dz1
-  real*8   :: time, oldtime, dt, dt1, xmax
+  real*8   :: time, oldtime, dt, dt1
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
   integer, dimension(:),   allocatable :: ipiv
   real*8,  dimension(:),   allocatable :: ldiag, mdiag, udiag
@@ -16,9 +16,8 @@ program main_kedgeTop2DFD
   real*8,  dimension(:,:), allocatable :: wt, Lt, sf, wt_tmp, Lt_tmp
   real*8,  dimension(:,:), allocatable :: wt_rhs, Lt_rhs, DsfDz, DsfDr, DLtDz, DLtDr, ekk, egg, exx
   real*8,  dimension(:,:), allocatable :: L, D, B, P, Paux, Pinv, dumeig
-  character*128 :: prefix, restart, fileout, tfile
+  character*128 :: prefix, restart, tfile
   character*128 :: vfile ! Erase  this line
-  character*10 :: TSformat
   real*8, parameter :: PI = 4.d0*atan(1.0d0)
 
 ! Read parameters
@@ -201,7 +200,7 @@ program main_kedgeTop2DFD
   end do
 
   if (Bo == 0d0) then
-    call infBoussinesqBC(vs,ir,r,Nr,Rasp,regOpt)
+    call infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
     do i=1,Nr
       write(25,109) i, r(i), vs(i)
     enddo
@@ -227,21 +226,17 @@ program main_kedgeTop2DFD
   do m=1,Nsteps
     time=m*dt+oldtime
       !First RK2 step
-      !call rhsXG(x,g,s,Re,r,dr,dz,xrhs,grhs,Nz,Nr,DsDz,DsDr)
       call rhsXG2(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
       wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
       Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
-        !--call solve_streamfn(xtmp,s,r,dr,dz,L,D,Nz,Nr)
-      call solve_streamfn(wt_tmp,sf,r,dr,dz,L,D,Nz,Nr,P,Pinv)
+      call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
       call BndConds(wt_tmp,Lt_tmp,sf,Bo,wf,beta,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
      !Second RK2 step
-      !call rhsXG(xtmp,gtmp,s,Re,r,dr,dz,xrhs,grhs,Nz,Nr,DsDz,DsDr)
       call rhsXG2(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
       wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
       Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
-        !--call solve_streamfn(x,s,r,dr,dz,L,D,Nz,Nr)
-      call solve_streamfn(wt,sf,r,dr,dz,L,D,Nz,Nr,P,Pinv)
+      call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
       call BndConds(wt,Lt,sf,Bo,wf,beta,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !!      call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
@@ -252,7 +247,6 @@ program main_kedgeTop2DFD
                                                    dt,time,prefix,ix,init_file)
     end if
     if (mod(m,itseries).eq.0) then
-      !xmax=maxval(maxval(x,1))
       write(15,100) time, Ek, Eg, Ex, ulr, ulv, ulz
     end if
   end do

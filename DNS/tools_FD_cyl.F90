@@ -73,10 +73,10 @@ module tools_FD_cyl
       end do
     end subroutine rhsXG2
 
-    subroutine solve_streamfn(x, s, r, dr, dz, L, D, Nz, Nr, P, Pinv)
+    subroutine solve_streamfn(x, s, r, dz, L, D, Nz, Nr, P, Pinv)
       implicit none
       integer                           :: i, j, Nz, Nr, info
-      real*8, intent(in)                :: dr, dz
+      real*8, intent(in)                :: dz
       real*8, dimension(Nr), intent(in) :: r
       real*8, dimension(Nz,Nr)          :: x, s
       real*8, dimension(2:Nz-1,2:Nr-1)  :: D, g
@@ -148,12 +148,12 @@ module tools_FD_cyl
     end subroutine regSystemMatrices
 
 
-    subroutine infBoussinesqBC(vs,ir,r,Nr,Rasp,regOpt)
+    subroutine infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
     implicit none
     integer :: i,Nsys
     parameter (Nsys=3)
     logical, intent(in) :: regOpt
-    integer,intent(in)  :: ir, Nr
+    integer,intent(in)  :: Nr
     real*8, intent(in)  :: r(Nr), Rasp
     real*8, intent(out) :: vs(Nr)
     real*8 :: a,b,c,d,eps,delta,AA,BB
@@ -253,7 +253,7 @@ module tools_FD_cyl
     subroutine BndConds(x, g, s, Bo, w, beta, alpha, time, r, dr, dz,&
                            Nz, Nr, ned, ldiag, mdiag, udiag, ir,vs)
       implicit none
-      integer :: i, j, Nz, Nr, ned, ir, info
+      integer :: i, Nz, Nr, ned, ir, info
       real*8  :: Bo, w, beta, alpha, time, dr, dz
       real*8, dimension(Nr)       :: r, vs
       real*8, dimension(Nz,Nr)    :: x, g, s
