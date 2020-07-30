@@ -6,7 +6,7 @@ program knifeEdge
   integer  :: i, j, m, ix, irestart, ir
   integer  :: igraph, itseries, ibegin, init_file, info
   real*8   :: Re, Re1, Bo, Bo1, beta, beta1, alpha, alpha1, f, f1, wf, wf1, simTU, NT, NtsT, T
-  real*8   :: Hasp, Hasp1, Rasp, Rasp1, dr, dr1, dz, dz1
+  real*8   :: Gama, eta, Hasp, Hasp1, Rasp, Rasp1, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1, xmax
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
   integer, dimension(:),   allocatable :: ipiv
@@ -26,14 +26,14 @@ program knifeEdge
   ix=index(prefix//' ',' ')-1
   read*, restart   ! name of restart file
   irestart=index(restart//' ',' ')-1
-  read*, Re
   read*, Bo
+  read*, Re
   read*, alpha
   read*, wf
-  read*, Hasp
-  read*, Rasp
-  read*, Nz
+  read*, Gama
+  read*, eta
   read*, Nr
+  read*, Nz
   read*, ned
   read*, dt         ! Default dt if wf = 0
   read*, NtsT       ! Number of Time Steps per Period
@@ -43,6 +43,10 @@ program knifeEdge
   read*, itseries
   read*, init_file
   read*, ibegin     ! controls the start/restart process
+
+
+  Hasp = Gama/eta
+  Rasp =  1d0/eta
 
   beta = 1.d0
   dr= Rasp/(Nr-1)
