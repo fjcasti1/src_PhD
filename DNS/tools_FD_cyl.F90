@@ -215,11 +215,11 @@ module tools_FD_cyl
     return
     end subroutine printAnalyticText
 
-    subroutine BndConds(wt, Lt, sf, Bo, w, beta, alpha, time, r, dr, dz,&
+    subroutine BndConds(wt, Lt, sf, Bo, w, alpha, time, r, dr, dz,&
                            Nz, Nr, ned, ldiag, mdiag, udiag, ir,vs)
       implicit none
       integer :: i, Nz, Nr, ned, ir, info
-      real*8  :: Bo, w, beta, alpha, time, dr, dz
+      real*8  :: Bo, w, alpha, time, dr, dz
       real*8, dimension(Nr)       :: r, vs
       real*8, dimension(Nz,Nr)    :: wt, Lt, sf
       real*8, dimension(2:Nr-1)   :: f
@@ -251,11 +251,11 @@ module tools_FD_cyl
         ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
         f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
         f(ir-ned) = f(ir-ned)-Bo*(1/dr**2d0-1/(2d0*r(ir-ned)*dr))*&
-                                  (beta+alpha*cos(w*time))*r(ir-ned+1)**2d0
-        f(ir-ned+1:ir) = (beta+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
+                                  (1d0+alpha*cos(w*time))*r(ir-ned+1)**2d0
+        f(ir-ned+1:ir) = (1d0+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
         f(ir+1:Nr-1) = (-2d0*Lt(Nz-1,ir+1:Nr-1)+0.5d0*Lt(Nz-2,ir+1:Nr-1))/dz
         f(ir+1) = f(ir+1)-Bo*(1/dr**2d0+1/(2d0*r(ir+1)*dr))*&
-                                        (beta+alpha*cos(w*time))*r(ir)**2d0
+                                        (1d0+alpha*cos(w*time))*r(ir)**2d0
         a_int(1:ir-ned-2) = ldiag(3:ir-ned)
         b_int(1:ir-ned-1) = mdiag(2:ir-ned)
         c_int(1:ir-ned-2) = udiag(2:ir-ned-1)
@@ -276,7 +276,7 @@ module tools_FD_cyl
 
         ! Assign values to the angular momentum
         Lt(Nz,2:ir-ned) = f(2:ir-ned)
-        Lt(Nz,ir-ned+1:ir) = (beta+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
+        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
         Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
       endif
     end subroutine BndConds
@@ -341,12 +341,12 @@ module tools_FD_cyl
 
     end subroutine observables
 
-    subroutine graphs(wt, Lt, sf, Re, Bo, beta, alpha, f, w, Hasp, Rasp, Nz, Nr,&
+    subroutine graphs(wt, Lt, sf, Re, Bo, alpha, f, w, Hasp, Rasp, Nz, Nr,&
                           ned, dz, dr, dt, time, prefix, ix, init_file)
       implicit none
       integer :: Nz, Nr, ned
       integer :: i, j, init_file, ix
-      real*8  :: Re, Bo, beta, alpha, f, w, Hasp, Rasp, dr, dz, dt, time
+      real*8  :: Re, Bo, alpha, f, w, Hasp, Rasp, dr, dz, dt, time
       real*8, dimension(Nz,Nr) :: wt, Lt, sf
       character*128 file_out, prefix
       file_out(1:ix)=prefix(1:ix)
@@ -355,7 +355,7 @@ module tools_FD_cyl
       init_file=init_file+1
       open(unit=10,file=file_out(1:ix+5),form='unformatted')
       write(10) Nz,Nr,ned,dz,dr,dt,time
-      write(10) Re,Bo,beta,alpha,f,w,Hasp,Rasp
+      write(10) Re,Bo,alpha,f,w,Hasp,Rasp
       write(10) ((sf(j,i),j=1,Nz),i=1,Nr),&
                 ((wt(j,i),j=1,Nz),i=1,Nr),&
                 ((Lt(j,i),j=1,Nz),i=1,Nr)

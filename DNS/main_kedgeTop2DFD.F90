@@ -5,7 +5,7 @@ program main_kedgeTop2DFD
   integer  :: Nz, Nz1, Nr, Nr1, ned, ned1, Nsteps, nsaves
   integer  :: i, j, m, ix, irestart, ir
   integer  :: igraph, itseries, ibegin, init_file, info
-  real*8   :: Re, Re1, Bo, Bo1, beta, beta1, alpha, alpha1, f, f1, wf, wf1, simTU, NT, NtsT, T
+  real*8   :: Re, Re1, Bo, Bo1, alpha, alpha1, f, f1, wf, wf1, simTU, NT, NtsT, T
   real*8   :: Gama, eta, Hasp, Hasp1, Rasp, Rasp1, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
@@ -43,11 +43,19 @@ program main_kedgeTop2DFD
   read*, init_file
   read*, ibegin     ! controls the start/restart process
 
-
+! Conversion from the spectral geometric formulation to the FD.
+! ! In the spectral case, we have defined the characteristic length to be R
+! ! instead of a. Hence, we need to apply the following two equations. We go
+! ! through that trouble to be able to match the values Gamma and eta from one
+! ! code to another and have the conversion to be made in the FD DNS, instead of
+! ! grabbing a piece of paper every time.
+! ! To be clear, the FD has different length scales, we only input the Gamma and
+! ! eta values for convenience, then they are transformed to Rasp, Hasp.
+! ! Gamma = H/R, eta  = a/R
+! ! Hasp  = H/a, Rasp = R/a
   Hasp = Gama/eta
   Rasp =  1d0/eta
 
-  beta = 1.d0
   dr= Rasp/(Nr-1)
   dz= Hasp/(Nz-1)
 
@@ -75,7 +83,6 @@ program main_kedgeTop2DFD
     print *, 'wf:           ', 0
   endif
   print *, 'wf:           ', wf
-  print *, 'beta:         ', beta
   print *, 'alpha:        ', alpha
   print *, 'Hasp:         ', Hasp
   print *, 'Rasp:         ', Rasp
@@ -138,7 +145,7 @@ program main_kedgeTop2DFD
   end if
   ! -----  ERASE THIS SECTION ---- !
 
-  oldtime=0.d0
+  oldtime=0d0
   if(ibegin.eq.0) then
     print*,'Starting from static initial conditions'
     wt=0d0
@@ -149,13 +156,13 @@ program main_kedgeTop2DFD
     open(unit=1,file=restart(1:irestart),status='old',&
         form='unformatted')
     read(1) Nz1,Nr1,ned1,dz1,dr1,dt1,oldtime
-    read(1) Re1,Bo1,beta1,alpha1,f1,wf1,Hasp1,Rasp1
+    read(1) Re1,Bo1,alpha1,f1,wf1,Hasp1,Rasp1
     read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
             ((wt(j,i),j=1,Nz),i=1,Nr),&
             ((Lt(j,i),j=1,Nz),i=1,Nr)
     close(1)
   end if
-  if(ibegin.eq.2) oldtime=0.d0
+  if(ibegin.eq.2) oldtime=0d0
 
 ! Format for writing time-series
   100 format (ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3)
@@ -226,24 +233,24 @@ program main_kedgeTop2DFD
   do m=1,Nsteps
     time=m*dt+oldtime
       !First RK2 step
-      call rhsXG2(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+      call rhs_wtLt(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
       wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
       Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
       call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(wt_tmp,Lt_tmp,sf,Bo,wf,beta,alpha,time,r,dr,dz,&
+      call BndConds(wt_tmp,Lt_tmp,sf,Bo,wf,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
      !Second RK2 step
-      call rhsXG2(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+      call rhs_wtLt(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
       wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
       Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
       call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(wt,Lt,sf,Bo,wf,beta,alpha,time,r,dr,dz,&
+      call BndConds(wt,Lt,sf,Bo,wf,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !!      call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
       call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs(wt,Lt,sf,Re,Bo,beta,alpha,f,wf,Hasp,Rasp,Nz,Nr,ned,dz,dr,&
+      call graphs(wt,Lt,sf,Re,Bo,alpha,f,wf,Hasp,Rasp,Nz,Nr,ned,dz,dr,&
                                                    dt,time,prefix,ix,init_file)
     end if
     if (mod(m,itseries).eq.0) then
