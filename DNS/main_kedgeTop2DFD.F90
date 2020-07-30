@@ -13,8 +13,8 @@ program knifeEdge
   real*8,  dimension(:),   allocatable :: ldiag, mdiag, udiag
   real*8,  dimension(:),   allocatable :: eigRe, eigIm
   real*8,  dimension(:),   allocatable :: r, vs
-  real*8,  dimension(:,:), allocatable :: x, g, s, xtmp, gtmp
-  real*8,  dimension(:,:), allocatable :: xrhs, grhs, DsDz, DsDr, DgDz, DgDr, ekk, egg, exx
+  real*8,  dimension(:,:), allocatable :: wt, Lt, sf, wt_tmp, Lt_tmp
+  real*8,  dimension(:,:), allocatable :: wt_rhs, Lt_rhs, DsfDz, DsfDr, DLtDz, DLtDr, ekk, egg, exx
   real*8,  dimension(:,:), allocatable :: L, D, B, P, Paux, Pinv, dumeig
   character*128 :: prefix, restart, fileout, tfile
   character*128 :: vfile ! Erase  this line
@@ -142,18 +142,18 @@ program knifeEdge
   oldtime=0.d0
   if(ibegin.eq.0) then
     print*,'Starting from static initial conditions'
-    x=0d0
-    g=0d0
-    s=0d0
+    wt=0d0
+    Lt=0d0
+    sf=0d0
   else
     print*,'Reading from restart file'
     open(unit=1,file=restart(1:irestart),status='old',&
         form='unformatted')
     read(1) Nz1,Nr1,ned1,dz1,dr1,dt1,oldtime
     read(1) Re1,Bo1,beta1,alpha1,f1,wf1,Hasp1,Rasp1
-    read(1) ((s(j,i),j=1,Nz),i=1,Nr),&
-            ((x(j,i),j=1,Nz),i=1,Nr),&
-            ((g(j,i),j=1,Nz),i=1,Nr)
+    read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
+            ((wt(j,i),j=1,Nz),i=1,Nr),&
+            ((Lt(j,i),j=1,Nz),i=1,Nr)
     close(1)
   end if
   if(ibegin.eq.2) oldtime=0.d0
@@ -228,27 +228,27 @@ program knifeEdge
     time=m*dt+oldtime
       !First RK2 step
       !call rhsXG(x,g,s,Re,r,dr,dz,xrhs,grhs,Nz,Nr,DsDz,DsDr)
-      call rhsXG2(x,g,s,Re,r,dr,dz,xrhs,grhs,Nz,Nr,DsDz,DsDr,DgDz,DgDr)
-      xtmp(2:Nz-1,2:Nr-1) = x(2:Nz-1,2:Nr-1) + dt*xrhs(2:Nz-1,2:Nr-1)
-      gtmp(2:Nz-1,2:Nr-1) = g(2:Nz-1,2:Nr-1) + dt*grhs(2:Nz-1,2:Nr-1)
+      call rhsXG2(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+      wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
+      Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
         !--call solve_streamfn(xtmp,s,r,dr,dz,L,D,Nz,Nr)
-      call solve_streamfn(xtmp,s,r,dr,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(xtmp,gtmp,s,Bo,wf,beta,alpha,time,r,dr,dz,&
+      call solve_streamfn(wt_tmp,sf,r,dr,dz,L,D,Nz,Nr,P,Pinv)
+      call BndConds(wt_tmp,Lt_tmp,sf,Bo,wf,beta,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
      !Second RK2 step
       !call rhsXG(xtmp,gtmp,s,Re,r,dr,dz,xrhs,grhs,Nz,Nr,DsDz,DsDr)
-      call rhsXG2(xtmp,gtmp,s,Re,r,dr,dz,xrhs,grhs,Nz,Nr,DsDz,DsDr,DgDz,DgDr)
-      x(2:Nz-1,2:Nr-1) = 0.5d0*(x(2:Nz-1,2:Nr-1) + xtmp(2:Nz-1,2:Nr-1) + dt*xrhs(2:Nz-1,2:Nr-1))
-      g(2:Nz-1,2:Nr-1) = 0.5d0*(g(2:Nz-1,2:Nr-1) + gtmp(2:Nz-1,2:Nr-1) + dt*grhs(2:Nz-1,2:Nr-1))
+      call rhsXG2(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+      wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
+      Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
         !--call solve_streamfn(x,s,r,dr,dz,L,D,Nz,Nr)
-      call solve_streamfn(x,s,r,dr,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(x,g,s,Bo,wf,beta,alpha,time,r,dr,dz,&
+      call solve_streamfn(wt,sf,r,dr,dz,L,D,Nz,Nr,P,Pinv)
+      call BndConds(wt,Lt,sf,Bo,wf,beta,alpha,time,r,dr,dz,&
                                         Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !!      call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
-      call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,s,g,x,r,DsDr,DsDz,DgDr,DgDz,Nz,Nr,dz,dr)
+      call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs(x,g,s,Re,Bo,beta,alpha,f,wf,Hasp,Rasp,Nz,Nr,ned,dz,dr,&
+      call graphs(wt,Lt,sf,Re,Bo,beta,alpha,f,wf,Hasp,Rasp,Nz,Nr,ned,dz,dr,&
                                                    dt,time,prefix,ix,init_file)
     end if
     if (mod(m,itseries).eq.0) then
@@ -262,9 +262,9 @@ program knifeEdge
   contains
 
     subroutine initialize()
-      allocate(x(Nz,Nr))
-      allocate(g(Nz,Nr))    !Nr and Nz must be number of NODES
-      allocate(s(Nz,Nr))
+      allocate(wt(Nz,Nr))
+      allocate(Lt(Nz,Nr))    !Nr and Nz must be number of NODES
+      allocate(sf(Nz,Nr))
       allocate(vs(Nr))
     ! Define the radial and vertical vectors r and z
       allocate(r(Nr))
@@ -291,14 +291,14 @@ program knifeEdge
       allocate(mdiag(2:Nr-1))
       allocate(udiag(2:Nr-2))
 
-      allocate(xtmp(Nz,Nr))
-      allocate(gtmp(Nz,Nr))
-      allocate(xrhs(2:Nz-1,2:Nr-1))
-      allocate(grhs(2:Nz-1,2:Nr-1))
-      allocate(DsDz(2:Nz-1,2:Nr-1))
-      allocate(DsDr(2:Nz-1,2:Nr-1))
-      allocate(DgDz(2:Nz-1,2:Nr-1))
-      allocate(DgDr(2:Nz-1,2:Nr-1))
+      allocate(wt_tmp(Nz,Nr))
+      allocate(Lt_tmp(Nz,Nr))
+      allocate(wt_rhs(2:Nz-1,2:Nr-1))
+      allocate(Lt_rhs(2:Nz-1,2:Nr-1))
+      allocate(DsfDz(2:Nz-1,2:Nr-1))
+      allocate(DsfDr(2:Nz-1,2:Nr-1))
+      allocate(DLtDz(2:Nz-1,2:Nr-1))
+      allocate(DLtDr(2:Nz-1,2:Nr-1))
       allocate(ekk(Nz,Nr))
       allocate(egg(Nz,Nr))
       allocate(exx(Nz,Nr))
