@@ -1,4 +1,4 @@
-module tools_FD_cyl
+module libraryGKE
   implicit none
 
   contains
@@ -401,4 +401,4 @@ module tools_FD_cyl
       close(10)
     end subroutine graphs
 
-end module tools_FD_cyl
+end module libraryGKE
