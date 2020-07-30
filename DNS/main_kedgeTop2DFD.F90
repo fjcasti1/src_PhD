@@ -1,5 +1,5 @@
-program knifeEdge
-  use libraryGKE
+program main_kedgeTop2DFD
+  use tools_FD_cyl
   implicit none
   logical  :: existe, regOpt
   integer  :: Nz, Nz1, Nr, Nr1, ned, ned1, Nsteps, nsaves
@@ -307,4 +307,4 @@ program knifeEdge
       exx = 0d0
     end subroutine initialize
 
-end program knifeEdge
+end program main_kedgeTop2DFD
