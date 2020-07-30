@@ -3,41 +3,6 @@ module tools_FD_cyl
 
   contains
 
-    subroutine rhsXG(x, g, s, Re, r, dr, dz, xrhs, grhs, Nz, Nr, DsDz, DsDr)
-      implicit none
-      integer             :: i, j, Nz, Nr
-      real*8, intent(in)  :: Re, dr, dz
-      real*8              :: DxDz, DgDz, DxDr, DgDr
-      real*8              :: D2xDz2, D2gDz2, D2xDr2, D2gDr2
-      real*8, dimension(2:Nz-1,2:Nr-1)      :: DsDz, DsDr
-      real*8, dimension(Nr), intent(in)     :: r
-      real*8, dimension(2:Nz-1,2:Nr-1)      :: xrhs, grhs
-      real*8, dimension(Nz,Nr), intent(in)  :: x, g, s
-      do i=2,Nz-1
-        do j=2,Nr-1
-        ! First derivatives with respect to z
-          DxDz      = (x(i+1,j)-x(i-1,j))/(2d0*dz)
-          DgDz      = (g(i+1,j)-g(i-1,j))/(2d0*dz)  !!
-          DsDz(i,j) = (s(i+1,j)-s(i-1,j))/(2d0*dz)
-        ! First derivatives with respect to r
-          DxDr      = (x(i,j+1)-x(i,j-1))/(2d0*dr)
-          DgDr      = (g(i,j+1)-g(i,j-1))/(2d0*dr)  !!
-          DsDr(i,j) = (s(i,j+1)-s(i,j-1))/(2d0*dr)
-        ! Second derivatives with respect to z
-          D2xDz2 = (x(i-1,j)-2d0*x(i,j)+x(i+1,j))/(dz**2d0)
-          D2gDz2 = (g(i-1,j)-2d0*g(i,j)+g(i+1,j))/(dz**2d0)
-        ! Second derivatives with respect to r
-          D2xDr2 = (x(i,j-1)-2d0*x(i,j)+x(i,j+1))/(dr**2d0)
-          D2gDr2 = (g(i,j-1)-2d0*g(i,j)+g(i,j+1))/(dr**2d0)
-        ! Right hand side of the vorticity and angular momentum
-          xrhs(i,j) = (DsDz(i,j)*DxDr-DsDr(i,j)*DxDz)/r(j)-(x(i,j)*DsDz(i,j))/(r(j)**2d0)&
-                         +2d0*g(i,j)*DgDz/(r(j)**3d0)&
-                         +(D2xDz2+D2xDr2+DxDr/r(j)-x(i,j)/r(j)**2d0)/Re
-          grhs(i,j) = (DsDz(i,j)*DgDr-DsDr(i,j)*DgDz)/r(j)+(D2gDz2+D2gDr2-DgDr/r(j))/Re
-        end do
-      end do
-    end subroutine rhsXG
-
     subroutine rhsXG2(x, g, s, Re, r, dr, dz, xrhs, grhs, Nz, Nr, DsDz, DsDr, DgDz, DgDr)
       implicit none
       integer             :: i, j, Nz, Nr
