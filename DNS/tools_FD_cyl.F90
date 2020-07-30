@@ -3,69 +3,69 @@ module tools_FD_cyl
 
   contains
 
-    subroutine rhsXG2(x, g, s, Re, r, dr, dz, xrhs, grhs, Nz, Nr, DsDz, DsDr, DgDz, DgDr)
+    subroutine rhs_wtLt(wt, Lt, sf, Re, r, dr, dz, wt_rhs, Lt_rhs, Nz, Nr, DsfDz, DsfDr, DLtDz, DLtDr)
       implicit none
       integer             :: i, j, Nz, Nr
       real*8, intent(in)  :: Re, dr, dz
-      real*8              :: DxDz, DxDr
-      real*8              :: D2xDz2, D2gDz2, D2xDr2, D2gDr2
-      real*8, dimension(2:Nz-1,2:Nr-1)      :: DsDz, DsDr, DgDz, DgDr
+      real*8              :: DwtDz, DwtDr
+      real*8              :: D2wtDz2, D2LtDz2, D2wtDr2, D2LtDr2
+      real*8, dimension(2:Nz-1,2:Nr-1)      :: DsfDz, DsfDr, DLtDz, DLtDr
       real*8, dimension(Nr), intent(in)     :: r
-      real*8, dimension(2:Nz-1,2:Nr-1)      :: xrhs, grhs
-      real*8, dimension(Nz,Nr), intent(in)  :: x, g, s
+      real*8, dimension(2:Nz-1,2:Nr-1)      :: wt_rhs, Lt_rhs
+      real*8, dimension(Nz,Nr), intent(in)  :: wt, Lt, sf
       do i=2,Nz-1
         do j=2,Nr-1
         ! First derivatives with respect to z
-          DxDz      = (x(i+1,j)-x(i-1,j))/(2d0*dz)
-          DgDz(i,j) = (g(i+1,j)-g(i-1,j))/(2d0*dz)  !!
-          DsDz(i,j) = (s(i+1,j)-s(i-1,j))/(2d0*dz)
+          DwtDz      = (wt(i+1,j)-wt(i-1,j))/(2d0*dz)
+          DLtDz(i,j) = (Lt(i+1,j)-Lt(i-1,j))/(2d0*dz)  !!
+          DsfDz(i,j) = (sf(i+1,j)-sf(i-1,j))/(2d0*dz)
         ! First derivatives with respect to r
-          DxDr      = (x(i,j+1)-x(i,j-1))/(2d0*dr)
-          DgDr(i,j)      = (g(i,j+1)-g(i,j-1))/(2d0*dr)  !!
-          DsDr(i,j) = (s(i,j+1)-s(i,j-1))/(2d0*dr)
+          DwtDr      = (wt(i,j+1)-wt(i,j-1))/(2d0*dr)
+          DLtDr(i,j) = (Lt(i,j+1)-Lt(i,j-1))/(2d0*dr)  !!
+          DsfDr(i,j) = (sf(i,j+1)-sf(i,j-1))/(2d0*dr)
         ! Second derivatives with respect to z
-          D2xDz2 = (x(i-1,j)-2d0*x(i,j)+x(i+1,j))/(dz**2d0)
-          D2gDz2 = (g(i-1,j)-2d0*g(i,j)+g(i+1,j))/(dz**2d0)
+          D2wtDz2 = (wt(i-1,j)-2d0*wt(i,j)+wt(i+1,j))/(dz**2d0)
+          D2LtDz2 = (Lt(i-1,j)-2d0*Lt(i,j)+Lt(i+1,j))/(dz**2d0)
         ! Second derivatives with respect to r
-          D2xDr2 = (x(i,j-1)-2d0*x(i,j)+x(i,j+1))/(dr**2d0)
-          D2gDr2 = (g(i,j-1)-2d0*g(i,j)+g(i,j+1))/(dr**2d0)
+          D2wtDr2 = (wt(i,j-1)-2d0*wt(i,j)+wt(i,j+1))/(dr**2d0)
+          D2LtDr2 = (Lt(i,j-1)-2d0*Lt(i,j)+Lt(i,j+1))/(dr**2d0)
         ! Right hand side of the vorticity and angular momentum
-          xrhs(i,j) = (DsDz(i,j)*DxDr-DsDr(i,j)*DxDz)/r(j)-(x(i,j)*DsDz(i,j))/(r(j)**2d0)&
-                         +2d0*g(i,j)*DgDz(i,j)/(r(j)**3d0)&
-                         +(D2xDz2+D2xDr2+DxDr/r(j)-x(i,j)/r(j)**2d0)/Re
-          grhs(i,j) = (DsDz(i,j)*DgDr(i,j)-DsDr(i,j)*DgDz(i,j))/r(j)+(D2gDz2+D2gDr2-DgDr(i,j)/r(j))/Re
+          wt_rhs(i,j) = (DsfDz(i,j)*DwtDr-DsfDr(i,j)*DwtDz)/r(j)-(wt(i,j)*DsfDz(i,j))/(r(j)**2d0)&
+                         +2d0*Lt(i,j)*DLtDz(i,j)/(r(j)**3d0)&
+                         +(D2wtDz2+D2wtDr2+DwtDr/r(j)-wt(i,j)/r(j)**2d0)/Re
+          Lt_rhs(i,j) = (DsfDz(i,j)*DLtDr(i,j)-DsfDr(i,j)*DLtDz(i,j))/r(j)+(D2LtDz2+D2LtDr2-DLtDr(i,j)/r(j))/Re
         end do
       end do
-    end subroutine rhsXG2
+    end subroutine rhs_wtLt
 
-    subroutine solve_streamfn(x, s, r, dz, L, D, Nz, Nr, P, Pinv)
+    subroutine solve_streamfn(wt, sf, r, dz, L, D, Nz, Nr, P, Pinv)
       implicit none
       integer                           :: i, j, Nz, Nr, info
       real*8, intent(in)                :: dz
       real*8, dimension(Nr), intent(in) :: r
-      real*8, dimension(Nz,Nr)          :: x, s
-      real*8, dimension(2:Nz-1,2:Nr-1)  :: D, g
+      real*8, dimension(Nz,Nr)          :: wt, sf
+      real*8, dimension(2:Nz-1,2:Nr-1)  :: D, Lt
       real*8, dimension(2:Nz-2,2:Nr-1)  :: L
       real*8, dimension(2:Nr-1,2:Nr-1)  :: P, Pinv
     ! Compute right hand side of stream function equation multiplied by dz^2,
     ! NEED TO CHANGE IF BCs are not ZERO DIRICHLET
       do i=2,Nz-1
         do j=2,Nr-1
-          s(i,j) = r(j)*x(i,j)*dz**2d0
+          sf(i,j) = r(j)*wt(i,j)*dz**2d0
         end do
       end do
     ! Solve the system A*Psi=rhs with A=L*D*L^T for the interior
 
-      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1.0d0,s(2:Nz-1,2:Nr-1),Nz-2,Pinv,Nr-2,0.0d0,g,Nz-2)
+      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1.0d0,sf(2:Nz-1,2:Nr-1),Nz-2,Pinv,Nr-2,0.0d0,Lt,Nz-2)
 
       do j=2,Nr-1
-        call dpttrs(Nz-2,1,D(2:Nz-1,j),L(2:Nz-2,j),g(2:Nz-1,j),Nz-2,info)
+        call dpttrs(Nz-2,1,D(2:Nz-1,j),L(2:Nz-2,j),Lt(2:Nz-1,j),Nz-2,info)
         if(info.ne.0) then
           print*, 'dpttrs info: ',info, j
         end if
       end do
 
-      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1.0d0,g,Nz-2,P,Nr-2,0.0d0,s(2:Nz-1,2:Nr-1),Nz-2)
+      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1.0d0,Lt,Nz-2,P,Nr-2,0.0d0,sf(2:Nz-1,2:Nr-1),Nz-2)
 
     ! The previous multiplication automatically updated the interior values of
     ! the stream function, the boundary conditions are zero in this problem so
@@ -215,13 +215,13 @@ module tools_FD_cyl
     return
     end subroutine printAnalyticText
 
-    subroutine BndConds(x, g, s, Bo, w, beta, alpha, time, r, dr, dz,&
+    subroutine BndConds(wt, Lt, sf, Bo, w, beta, alpha, time, r, dr, dz,&
                            Nz, Nr, ned, ldiag, mdiag, udiag, ir,vs)
       implicit none
       integer :: i, Nz, Nr, ned, ir, info
       real*8  :: Bo, w, beta, alpha, time, dr, dz
       real*8, dimension(Nr)       :: r, vs
-      real*8, dimension(Nz,Nr)    :: x, g, s
+      real*8, dimension(Nz,Nr)    :: wt, Lt, sf
       real*8, dimension(2:Nr-1)   :: f
       real*8, dimension(3:Nr-1)   :: ldiag
       real*8, dimension(2:Nr-1)   :: mdiag
@@ -233,27 +233,27 @@ module tools_FD_cyl
     !---Left and Right Boundaries---!
       !The stream function is zero at the boundaries there is no need to update
       !since we only updated the interior
-      x(:,1)  = 0.0d0
-      g(:,1)  = 0.0d0
-      x(:,Nr) = (0.5d0*s(:,Nr-2)-4d0*s(:,Nr-1))/(r(Nr)*dr**2d0)
-      g(:,Nr) = 0.0d0
+      wt(:,1)  = 0.0d0
+      Lt(:,1)  = 0.0d0
+      wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
+      Lt(:,Nr) = 0.0d0
     !---Bottom Boundary---!
-      g(1,2:Nr-1) = 0.0d0
-      x(1,2:Nr-1) = (0.5d0*s(3,2:Nr-1)-4d0*s(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
+      Lt(1,2:Nr-1) = 0.0d0
+      wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
     !---Top Boundary, Contaminated Free Surface---!
-      x(Nz,2:Nr-1) = (0.5d0*s(Nz-2,2:Nr-1)-4d0*s(Nz-1,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
+      wt(Nz,2:Nr-1) = (0.5d0*sf(Nz-2,2:Nr-1)-4d0*sf(Nz-1,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
       if (Bo == 0d0) then
         do i=2,Nr-1
-          g(Nz,i) = vs(i)*r(i)
+          Lt(Nz,i) = vs(i)*r(i)
         enddo
       else
         ! Calculate the right hand side of the ang momentum equation
         ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
-        f(2:ir-ned) = (-2d0*g(Nz-1,2:ir-ned)+0.5d0*g(Nz-2,2:ir-ned))/dz
+        f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
         f(ir-ned) = f(ir-ned)-Bo*(1/dr**2d0-1/(2d0*r(ir-ned)*dr))*&
                                   (beta+alpha*cos(w*time))*r(ir-ned+1)**2d0
         f(ir-ned+1:ir) = (beta+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
-        f(ir+1:Nr-1) = (-2d0*g(Nz-1,ir+1:Nr-1)+0.5d0*g(Nz-2,ir+1:Nr-1))/dz
+        f(ir+1:Nr-1) = (-2d0*Lt(Nz-1,ir+1:Nr-1)+0.5d0*Lt(Nz-2,ir+1:Nr-1))/dz
         f(ir+1) = f(ir+1)-Bo*(1/dr**2d0+1/(2d0*r(ir+1)*dr))*&
                                         (beta+alpha*cos(w*time))*r(ir)**2d0
         a_int(1:ir-ned-2) = ldiag(3:ir-ned)
@@ -275,23 +275,23 @@ module tools_FD_cyl
         end if
 
         ! Assign values to the angular momentum
-        g(Nz,2:ir-ned) = f(2:ir-ned)
-        g(Nz,ir-ned+1:ir) = (beta+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
-        g(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
+        Lt(Nz,2:ir-ned) = f(2:ir-ned)
+        Lt(Nz,ir-ned+1:ir) = (beta+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
+        Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
       endif
     end subroutine BndConds
 
-    subroutine kineticEnergy(Ek, e, g, r, DsDr, DsDz, Nz, Nr, dz, dr)
+    subroutine kineticEnergy(Ek, e, Lt, r, DsfDr, DsfDz, Nz, Nr, dz, dr)
       implicit none
       integer :: Nz, Nr, j
       real*8  :: dz, dr, Ek
       real*8, dimension(Nr)     :: r
-      real*8, dimension(Nz,Nr)  :: g, e
-      real*8, dimension(2:Nz-1,2:Nr-1), intent(in) :: DsDz, DsDr
+      real*8, dimension(Nz,Nr)  :: Lt, e
+      real*8, dimension(2:Nz-1,2:Nr-1), intent(in) :: DsfDz, DsfDr
       ! Interior and Top Boundary
       do j=2,Nr-1
-        e(2:Nz-1,j) = 0.5d0*(DsDr(:,j)**2d0+g(:,j)**2d0+DsDz(:,j)**2d0)/(r(j)**2d0)
-        e(Nz,j) = 0.5d0*(g(Nz,j)/r(j))**2d0
+        e(2:Nz-1,j) = 0.5d0*(DsfDr(:,j)**2d0+Lt(:,j)**2d0+DsfDz(:,j)**2d0)/(r(j)**2d0)
+        e(Nz,j) = 0.5d0*(Lt(Nz,j)/r(j))**2d0
       end do
       ! The left, right and bottom boundaries have kinetic energy zero and are
       ! not imposed because it was initialized to said value.
@@ -299,19 +299,19 @@ module tools_FD_cyl
         Ek = sum(sum(e,1))*dz*dr
     end subroutine kineticEnergy
 
-    subroutine observables(Ek, Eg, Ex, ulr, ulv, ulz, ekk, egg, exx, s, g, x, r, DsDr, DsDz, DgDr, DgDz, Nz, Nr, dz, dr)
+    subroutine observables(Ek, Eg, Ex, ulr, ulv, ulz, ekk, egg, exx, sf, Lt, wt, r, DsfDr, DsfDz, DLtDr, DLtDz, Nz, Nr, dz, dr)
       implicit none
       integer :: Nz, Nr, j, ilz, ilr
       real*8  :: dz, dr, Ek, Eg, Ex, ulr, ulv, ulz
       real*8, dimension(Nr)     :: r
-      real*8, dimension(Nz,Nr)  :: s, g, x, ekk, egg, exx
-      real*8, dimension(2:Nz-1,2:Nr-1), intent(in) :: DsDr, DsDz, DgDr, DgDz
+      real*8, dimension(Nz,Nr)  :: sf, Lt, wt, ekk, egg, exx
+      real*8, dimension(2:Nz-1,2:Nr-1), intent(in) :: DsfDr, DsfDz, DLtDr, DLtDz
 
       ! -- Kinetic Energy -- !
       ! Interior and Top Boundary
       do j=2,Nr-1
-        ekk(2:Nz-1,j) = 0.5d0*(DsDr(:,j)**2d0+g(:,j)**2d0+DsDz(:,j)**2d0)/(r(j)**2d0)
-        ekk(Nz,j) = 0.5d0*(g(Nz,j)**2d0+((s(Nz-2,j)-4*s(Nz-1,j))/(2*dz))**2d0)/(r(j)**2d0)
+        ekk(2:Nz-1,j) = 0.5d0*(DsfDr(:,j)**2d0+Lt(:,j)**2d0+DsfDz(:,j)**2d0)/(r(j)**2d0)
+        ekk(Nz,j) = 0.5d0*(Lt(Nz,j)**2d0+((sf(Nz-2,j)-4*sf(Nz-1,j))/(2*dz))**2d0)/(r(j)**2d0)
       end do
       ! The left, right and bottom boundaries have kinetic energy zero and are
       ! not imposed because it was initialized to said value. The top boundary
@@ -321,17 +321,13 @@ module tools_FD_cyl
         Ek = sum(sum(ekk,1))*dz*dr
 
       ! -- Global Angular Momentum -- !
-!!      do j=1,Nr
-!!        egg(1:Nz,j) = g(:,j)**2d0
-        egg = g**2d0
-!!      end do
+        egg = Lt**2d0
       ! L2 norm of the angular momentum
         Eg = sum(sum(egg,1))*dz*dr
 
       ! -- Enstrophy -- !
       do j=2,Nr-1
-        exx(2:Nz-1,j) = (DgDz(:,j)/r(j))**2d0+x(:,j)**2d0+(DgDr(:,j)/r(j))**2d0
-!        exx(Nz,j) = (DgDz(Nz,j)/r(j))**2d0+x(Nz,j)**2d0+(DgDr(Nz,j)/r(j))**2d0
+        exx(2:Nz-1,j) = (DLtDz(:,j)/r(j))**2d0+wt(:,j)**2d0+(DLtDr(:,j)/r(j))**2d0
       end do
         Ex = sum(sum(exx,1))*dz*dr
 
@@ -339,19 +335,19 @@ module tools_FD_cyl
       ilr = 3*(Nr-1)/4+1 ! localized r index
       ilz = 3*(Nz-1)/4+1 ! localized z index
 
-      ulr = -DgDz(ilz-1,ilr-1)/r(ilr) ! ilr,ilz -1 because we only have the interior of the derivatavies
-      ulv = g(ilz-1,ilr-1)/r(ilr)
-      ulz = DgDr(ilz-1,ilr-1)/r(ilr) ! ilr,ilz -1 because we only have the interior of the derivatavies
+      ulr = -DLtDz(ilz-1,ilr-1)/r(ilr) ! ilr,ilz -1 because we only have the interior of the derivatavies
+      ulv = Lt(ilz-1,ilr-1)/r(ilr)
+      ulz = DLtDr(ilz-1,ilr-1)/r(ilr) ! ilr,ilz -1 because we only have the interior of the derivatavies
 
     end subroutine observables
 
-    subroutine graphs(x, g, s, Re, Bo, beta, alpha, f, w, Hasp, Rasp, Nz, Nr,&
+    subroutine graphs(wt, Lt, sf, Re, Bo, beta, alpha, f, w, Hasp, Rasp, Nz, Nr,&
                           ned, dz, dr, dt, time, prefix, ix, init_file)
       implicit none
       integer :: Nz, Nr, ned
       integer :: i, j, init_file, ix
       real*8  :: Re, Bo, beta, alpha, f, w, Hasp, Rasp, dr, dz, dt, time
-      real*8, dimension(Nz,Nr) :: x, g, s
+      real*8, dimension(Nz,Nr) :: wt, Lt, sf
       character*128 file_out, prefix
       file_out(1:ix)=prefix(1:ix)
       file_out(ix+1:ix+1)='_'
@@ -360,9 +356,9 @@ module tools_FD_cyl
       open(unit=10,file=file_out(1:ix+5),form='unformatted')
       write(10) Nz,Nr,ned,dz,dr,dt,time
       write(10) Re,Bo,beta,alpha,f,w,Hasp,Rasp
-      write(10) ((s(j,i),j=1,Nz),i=1,Nr),&
-                ((x(j,i),j=1,Nz),i=1,Nr),&
-                ((g(j,i),j=1,Nz),i=1,Nr)
+      write(10) ((sf(j,i),j=1,Nz),i=1,Nr),&
+                ((wt(j,i),j=1,Nz),i=1,Nr),&
+                ((Lt(j,i),j=1,Nz),i=1,Nr)
       close(10)
     end subroutine graphs
 
