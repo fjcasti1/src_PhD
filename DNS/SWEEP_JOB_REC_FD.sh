@@ -114,10 +114,10 @@ my_job() {
   out_rec="${res_dir}sweep_${prefix}.out"
   ! [[ -d "$res_dir" ]] && mkdir -p "$res_dir" || :
 
-  printf "./bin/${sourceFile}\n"
+  printf "Running binary file ${sourceFile}\n"
   if [ $MODE == "DNS" ] || [ $MODE == "MOVIEDNS" ] || [ $MODE == "ALL" ]; then
     printf "Computing solution for ${prefix}\n"
-    ./bin/$sourceFile > $out_rec < <(
+    $sourceFile > $out_rec < <(
       input_gen $prefix $restart $NtsT $NT $Nsaves $dt $ibegin $regOpt $out_rec $M $N)
 
     if [ $MODE != "MOVIEDNS" ]; then
