@@ -2,5 +2,6 @@
 *cpython*.so
 pv_input
 *genmod*
+*.mod*
 DNS/*.o
 postproc/*.o
