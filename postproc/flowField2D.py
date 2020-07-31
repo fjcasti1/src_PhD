@@ -6,6 +6,7 @@ import multiprocessing as mp
 from functools import partial
 from glob import glob
 from myPlots import * # It also imports pylab
+from myReader import * # It also imports numpy
 
 def get_args():
     class myFormatter(argparse.RawDescriptionHelpFormatter,
@@ -21,8 +22,8 @@ def get_args():
             help='List of clipping values for each field')
     parser.add_argument('-s','--size',dest='figBaseSize', type=int,
             help='Base size of the figure',default=4)
-    parser.add_argument('-g','--gamma',dest='Gamma', type=float,
-            help='Aspect ratio of figure: Height/Lenth',default=1)
+    parser.add_argument('-g','--gamma-disable',dest='gammaOpt',action='store_false',
+            help='Aspect ratio of figure: Height/Lenth',default=True)
     parser.add_argument('-m','--max',dest='gma', type=float,
             help='Global absolute maximum. gma = max(abs(f)) where f is the \
             field')
@@ -35,7 +36,7 @@ def get_args():
     clips = list(map(float, clips))
 
     return args.DataFilePath,fields,clips,\
-        args.figBaseSize,args.Gamma,args.gma
+        args.figBaseSize,args.gammaOpt,args.gma
 
 def get_files_to_plot(DataFilePath):
     drecs = []
@@ -54,7 +55,7 @@ def get_files_to_plot(DataFilePath):
     drecs.sort()
     return drecs
 
-def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=0,Nell=33,Nred=3,gma=None):
+def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=1.0,Nell=33,Nred=3,gma=None):
     if not gma: # Calculate abolute maximum if gma not specified
         gma = abs(field).max()
     ell = clip*pylab.linspace(-1,1,Nell)*gma
@@ -68,7 +69,7 @@ def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=0,Nell=33,Nred=3,gma=None):
     #    contour(X,Y,field,levels=[0],linestyles='-',colors='#777777')
     return None
 
-def main(f,fields,clips,fb,Gamma,gma):
+def main(f,fields,clips,fb,gammaOpt,gma):
     '''
     Generates a figure of size (figBaseSize,Gamma*figBaseSize) with 1 axes
     The axes and the box around the figure are not visible
@@ -83,18 +84,26 @@ def main(f,fields,clips,fb,Gamma,gma):
     bn = os.path.basename(f) # basename
     ext = os.path.splitext(f)[-1] # extension
     if ext == '.vtk':
+        tokens = ["Bo","Re","Ro","wf","Gamma","eta","mode","pert"]
         R,Z,d = read_vtk(f)
     elif ext == '':
-        print('Read restart') #TODO
+        tokens = ["Bo","Re","Ro","wf","Gamma","eta","NtsT","NT"]
+        R,Z,d = read_FD_restart(f)
+
+    # Obtain parameters from basename
+    params = {token:float(parse_token(bn,token)) for token in tokens}
 
     for i in range(len(fields)):
-        mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=Gamma,gma=gma)
+        if gammaOpt:
+            mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=params['Gamma'],gma=gma)
+        else:
+            mycf(R,Z,d[fields[i]],clips[i],fb=fb,gma=gma)
         plt.savefig(outDir+fields[i]+'_'+bn.split('.')[0]+'.png')
         plt.close()
     return None
 
 if __name__ == '__main__':
-    DataFilePath,fields,clips,figBaseSize,Gamma,gma = get_args()
+    DataFilePath,fields,clips,figBaseSize,gammaOpt,gma = get_args()
 
 #    if create: os.system("./myParaview < pv_input &")
 
@@ -111,7 +120,7 @@ if __name__ == '__main__':
       mkl_set_num_threads(NPROCS)
       pool = mp.Pool(processes=NPROCS)
       D  = partial(main,fields=fields,clips=clips,
-              fb=figBaseSize,Gamma=Gamma,gma=gma)
+              fb=figBaseSize,gammaOpt=gammaOpt,gma=gma)
       DD = pool.map(D,drecs)
     else:
       for drec in drecs:
