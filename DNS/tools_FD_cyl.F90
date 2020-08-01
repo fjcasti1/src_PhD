@@ -71,98 +71,105 @@ module tools_FD_cyl
     ! the stream function, the boundary conditions are zero in this problem so
     ! no need to update them.
     end subroutine solve_streamfn
+!   subroutine regSystemMatrices(Nsys,eps,delta,Rasp,f)
 
+    subroutine regSystemMatrices(Nsys,eta,eps,delta,f)
+      implicit none
+      integer,intent(in)    :: Nsys
+      real*8, intent(in)    :: eps, delta,eta
+      real*8, intent(inout) :: f(0:Nsys,1)
+      real*8  :: M(0:Nsys,0:Nsys)
+      real*8  :: AA,BB
+      integer :: info, ipiv(Nsys+1)
+!      Define parameters and matrices
+!      AA = 1/(1d0-Rasp**2d0)
+!      BB = -Rasp**2d0/(1d0-Rasp**2d0)
+      AA = eta**2d0/(eta**2d0-1d0)
+      BB = -AA
 
-    subroutine regSystemMatrices(Nsys,eps,delta,Rasp,f)
-    implicit none
-    integer,intent(in)    :: Nsys
-    real*8, intent(in)    :: eps, delta,Rasp
-    real*8, intent(inout) :: f(0:Nsys,1)
-    real*8  :: M(0:Nsys,0:Nsys)
-    real*8  :: AA,BB
-    integer :: info, ipiv(Nsys+1)
-!    Define parameters and matrices
-    AA = 1/(1d0-Rasp**2d0)
-    BB = -Rasp**2d0/(1d0-Rasp**2d0)
+      M(0,0) = (eta-eps)**3d0
+      M(0,1) = (eta-eps)**2d0
+      M(0,2) = (eta-eps)
+      M(0,3) = 1d0
+      M(1,0) = (eta+delta)**3d0
+      M(1,1) = (eta+delta)**2d0
+      M(1,2) = (eta+delta)
+      M(1,3) = 1d0
+      M(2,0) = 3d0*(eta-eps)**2d0
+      M(2,1) = 2d0*(eta-eps)
+      M(2,2) = 1d0
+      M(2,3) = 0d0
+      M(3,0) = 3d0*(eta+delta)**2d0
+      M(3,1) = 2d0*(eta+delta)
+      M(3,2) = 1d0
+      M(3,3) = 0d0
 
-    M(0,0) = (1d0-eps)**3d0
-    M(0,1) = (1d0-eps)**2d0
-    M(0,2) = (1d0-eps)
-    M(0,3) = 1
-    M(1,0) = (1d0+delta)**3d0
-    M(1,1) = (1d0+delta)**2d0
-    M(1,2) = (1d0+delta)
-    M(1,3) = 1
-    M(2,0) = 3d0*(1d0-eps)**2d0
-    M(2,1) = 2d0*(1d0-eps)
-    M(2,2) = 1
-    M(2,3) = 0
-    M(3,0) = 3d0*(1d0+delta)**2d0
-    M(3,1) = 2d0*(1d0+delta)
-    M(3,2) = 1
-    M(3,3) = 0
-
-    f(0,1) = 1d0-eps
-    f(1,1) = AA*(1d0+delta)+BB/(1d0+delta)
-    f(2,1) = 1
-    f(3,1) = AA-BB/((1d0+delta)**2d0)
-!   Calculate coefficients of cubic spline to regularize analytical
-!   solution
-    call dgesv(Nsys+1,1,M,Nsys+1,ipiv,f,Nsys+1,info)
-    return
+      f(0,1) = eta-eps
+      f(1,1) = AA*(eta+delta)+BB/(eta+delta)
+      f(2,1) = 1d0
+      f(3,1) = AA-BB/((eta+delta)**2d0)
+!     Calculate coefficients of cubic spline to regularize analytical
+!     solution
+      call dgesv(Nsys+1,1,M,Nsys+1,ipiv,f,Nsys+1,info)
+      return
     end subroutine regSystemMatrices
 
 
-    subroutine infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
+!    subroutine infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
+    subroutine infBoussinesqBC(vs,eta,r,Nr,regOpt)
     implicit none
     integer :: i,Nsys
     parameter (Nsys=3)
     logical, intent(in) :: regOpt
     integer,intent(in)  :: Nr
-    real*8, intent(in)  :: r(Nr), Rasp
+    real*8, intent(in)  :: r(Nr), eta
     real*8, intent(out) :: vs(Nr)
     real*8 :: a,b,c,d,eps,delta,AA,BB
     !NOTE: eps, delta should be intent in as well
     real*8 :: f(0:Nsys,1)
     eps   = 2d-2
     delta = 2d-2
-    AA = 1/(1d0-Rasp**2d0)
-    BB = -Rasp**2d0/(1d0-Rasp**2d0)
+!    AA = 1/(1d0-Rasp**2d0)
+!    BB = -Rasp**2d0/(1d0-Rasp**2d0)
+    AA = eta**2d0/(eta**2d0-1d0)
+    BB = -AA
 !   Calculate coefficients of cubic splie to regularize analytical
 !   solution
     if (regOpt) then
-      call regSystemMatrices(Nsys,eps,delta,Rasp,f)
+!      call regSystemMatrices(Nsys,eps,delta,Rasp,f)
+      call regSystemMatrices(Nsys,eta,eps,delta,f)
       a = f(0,1)
       b = f(1,1)
       c = f(2,1)
       d = f(3,1)
 !     Calculate analytical solution for infinite Boussinesq
       do i=0,Nr
-        if (r(i) <= 1d0-eps) then
+        if (r(i) <= eta-eps) then
           vs(i)=r(i)
-        elseif (r(i) > 1d0-eps .and. r(i) < 1d0+delta) then
+        elseif (r(i) > eta-eps .and. r(i) < eta+delta) then
           vs(i)=a*r(i)**3d0+b*r(i)**2d0+c*r(i)+d
         else
           vs(i)=AA*r(i)+BB/r(i)
         endif
       enddo
-      call printRegularizationText(AA,BB,a,b,c,d,eps,delta,Rasp)
+      call printRegularizationText(AA,BB,a,b,c,d,eps,delta,eta)
     else
       do i=0,Nr
-        if (r(i) <= 1d0) then
+        if (r(i) <= eta) then
           vs(i)=r(i)
         else
           vs(i)=AA*r(i)+BB/r(i)
         endif
       enddo
-      call printAnalyticText(AA,BB,Rasp)
+!      call printAnalyticText(AA,BB,Rasp)
+      call printAnalyticText(AA,BB,eta)
     endif
     return
     end subroutine infBoussinesqBC
 
-    subroutine printRegularizationText(AA,BB,a,b,c,d,eps,delta,Rasp)
+    subroutine printRegularizationText(AA,BB,a,b,c,d,eps,delta,eta)
     implicit none
-    real*8, intent(in) :: AA,BB,a,b,c,d,eps,delta,Rasp
+    real*8, intent(in) :: AA,BB,a,b,c,d,eps,delta,eta
     print*, ''
     print*, '======================================================='
     print*, '=== REGULARIZATION OF ANALYTICAL BOUNDARY CONDITION ==='
@@ -188,14 +195,14 @@ module tools_FD_cyl
     print *, ' '
     print *, 'epsilon:  ', eps
     print *, 'delta:    ', delta
-    print *, 'A_r  :    ', Rasp
+    print *, 'eta  :    ', eta
     return
     end subroutine printRegularizationText
 
 
-    subroutine printAnalyticText(AA,BB,Rasp)
+    subroutine printAnalyticText(AA,BB,eta)
     implicit none
-    real*8, intent(in) :: AA,BB,Rasp
+    real*8, intent(in) :: AA,BB,eta
     print*, ''
     print*, '====================================='
     print*, '=== ANALYTICAL BOUNDARY CONDITION ==='
@@ -211,15 +218,15 @@ module tools_FD_cyl
     print *, '----- Knife Placement ----'
     print *, '--------------------------'
     print *, ' '
-    print *, 'A_r  :    ', Rasp
+    print *, 'eta  :    ', eta
     return
     end subroutine printAnalyticText
 
-    subroutine BndConds(wt, Lt, sf, Bo, w, alpha, time, r, dr, dz,&
-                           Nz, Nr, ned, ldiag, mdiag, udiag, ir,vs)
+    subroutine BndConds(wt, Lt, sf, Bo, wf, alpha, time, r, dr, dz,&
+                           Nz, Nr, ned, ldiag, mdiag, udiag, ir, vs)
       implicit none
       integer :: i, Nz, Nr, ned, ir, info
-      real*8  :: Bo, w, alpha, time, dr, dz
+      real*8  :: Bo, wf, alpha, time, dr, dz
       real*8, dimension(Nr)       :: r, vs
       real*8, dimension(Nz,Nr)    :: wt, Lt, sf
       real*8, dimension(2:Nr-1)   :: f
@@ -230,6 +237,7 @@ module tools_FD_cyl
       real*8, dimension(ir-ned-1) :: b_int
       real*8, dimension(Nr-ir-2)  :: a_ext, c_ext
       real*8, dimension(Nr-ir-1)  :: b_ext
+!      print*, 'check B_0'
     !---Left and Right Boundaries---!
       !The stream function is zero at the boundaries there is no need to update
       !since we only updated the interior
@@ -237,25 +245,30 @@ module tools_FD_cyl
       Lt(:,1)  = 0.0d0
       wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
       Lt(:,Nr) = 0.0d0
+!      print*, 'check B_1'
     !---Bottom Boundary---!
       Lt(1,2:Nr-1) = 0.0d0
       wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
+      print*, 'check B_2'
     !---Top Boundary, Contaminated Free Surface---!
       wt(Nz,2:Nr-1) = (0.5d0*sf(Nz-2,2:Nr-1)-4d0*sf(Nz-1,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
+!      print*, 'check B_3'
       if (Bo == 0d0) then
         do i=2,Nr-1
           Lt(Nz,i) = vs(i)*r(i)
         enddo
+!       print*, 'check B_4'
       else
+!        print*, 'check NO_ENTRY'
         ! Calculate the right hand side of the ang momentum equation
         ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
         f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
         f(ir-ned) = f(ir-ned)-Bo*(1/dr**2d0-1/(2d0*r(ir-ned)*dr))*&
-                                  (1d0+alpha*cos(w*time))*r(ir-ned+1)**2d0
-        f(ir-ned+1:ir) = (1d0+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
+                                  (1d0+alpha*cos(wf*time))*r(ir-ned+1)**2d0
+        f(ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
         f(ir+1:Nr-1) = (-2d0*Lt(Nz-1,ir+1:Nr-1)+0.5d0*Lt(Nz-2,ir+1:Nr-1))/dz
         f(ir+1) = f(ir+1)-Bo*(1/dr**2d0+1/(2d0*r(ir+1)*dr))*&
-                                        (1d0+alpha*cos(w*time))*r(ir)**2d0
+                                        (1d0+alpha*cos(wf*time))*r(ir)**2d0
         a_int(1:ir-ned-2) = ldiag(3:ir-ned)
         b_int(1:ir-ned-1) = mdiag(2:ir-ned)
         c_int(1:ir-ned-2) = udiag(2:ir-ned-1)
@@ -276,7 +289,7 @@ module tools_FD_cyl
 
         ! Assign values to the angular momentum
         Lt(Nz,2:ir-ned) = f(2:ir-ned)
-        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*cos(w*time))*r(ir-ned+1:ir)**2d0
+        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
         Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
       endif
     end subroutine BndConds
@@ -341,12 +354,12 @@ module tools_FD_cyl
 
     end subroutine observables
 
-    subroutine graphs(wt, Lt, sf, Re, Bo, alpha, f, w, Hasp, Rasp, Nz, Nr,&
+    subroutine graphs(wt, Lt, sf, Re, Bo, alpha, f, wf, Gama, eta, Nz, Nr,&
                           ned, dz, dr, dt, time, prefix, ix, init_file)
       implicit none
       integer :: Nz, Nr, ned
       integer :: i, j, init_file, ix
-      real*8  :: Re, Bo, alpha, f, w, Hasp, Rasp, dr, dz, dt, time
+      real*8  :: Re, Bo, alpha, f, wf, Gama, eta, dr, dz, dt, time
       real*8, dimension(Nz,Nr) :: wt, Lt, sf
       character*128 file_out, prefix
       file_out(1:ix)=prefix(1:ix)
@@ -355,7 +368,7 @@ module tools_FD_cyl
       init_file=init_file+1
       open(unit=10,file=file_out(1:ix+5),form='unformatted')
       write(10) Nz,Nr,ned,dz,dr,dt,time
-      write(10) Re,Bo,alpha,f,w,Hasp,Rasp
+      write(10) Re,Bo,alpha,f,wf,Gama,eta
       write(10) ((sf(j,i),j=1,Nz),i=1,Nr),&
                 ((wt(j,i),j=1,Nz),i=1,Nr),&
                 ((Lt(j,i),j=1,Nz),i=1,Nr)

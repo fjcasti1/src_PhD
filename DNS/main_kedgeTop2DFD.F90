@@ -6,7 +6,7 @@ program main_kedgeTop2DFD
   integer  :: i, j, m, ix, irestart, ir
   integer  :: igraph, itseries, ibegin, init_file, info
   real*8   :: Re, Re1, Bo, Bo1, alpha, alpha1, f, f1, wf, wf1, simTU, NT, NtsT, T
-  real*8   :: Gama, eta, Hasp, Hasp1, Rasp, Rasp1, dr, dr1, dz, dz1
+  real*8   :: ALT, RAD, Gama, eta, Gama1, eta1, Hasp, Rasp, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
   integer, dimension(:),   allocatable :: ipiv
@@ -44,20 +44,34 @@ program main_kedgeTop2DFD
   read*, ibegin     ! controls the start/restart process
 
 ! Conversion from the spectral geometric formulation to the FD.
-! ! In the spectral case, we have defined the characteristic length to be R
-! ! instead of a. Hence, we need to apply the following two equations. We go
-! ! through that trouble to be able to match the values Gamma and eta from one
-! ! code to another and have the conversion to be made in the FD DNS, instead of
-! ! grabbing a piece of paper every time.
-! ! To be clear, the FD has different length scales, we only input the Gamma and
-! ! eta values for convenience, then they are transformed to Rasp, Hasp.
-! ! Gamma = H/R, eta  = a/R
-! ! Hasp  = H/a, Rasp = R/a
+! In the spectral case, we have defined the characteristic length to be R
+! instead of a. Hence, we need to apply the following two equations. We go
+! through that trouble to be able to match the values Gamma and eta from one
+! code to another and have the conversion to be made in the FD DNS, instead of
+! grabbing a piece of paper every time.
+! To be clear, the FD has different length scales, we only input the Gamma and
+! eta values for convenience, then they are transformed to Rasp, Hasp.
+! Gamma = H/R, eta  = a/R
+! Hasp  = H/a, Rasp = R/a
+
+! ===========
+! = Scaling =
+! ==========
+! ALT = H/Lc
+! RAD = R/Lc
+! Characteristic Length: Lc = R
+! Gamma = H/R, eta  = a/R
+
+  ALT = Gama
+  RAD = 1d0
   Hasp = Gama/eta
   Rasp =  1d0/eta
 
   dr= Rasp/(Nr-1)
   dz= Hasp/(Nz-1)
+
+  dr= RAD/(Nr-1)
+  dz= ALT/(Nz-1)
 
   if (alpha.gt.0d0.AND.wf.gt.0d0) then  ! Forced system
     T  = 2.d0*PI/wf
@@ -84,8 +98,8 @@ program main_kedgeTop2DFD
   endif
   print *, 'wf:           ', wf
   print *, 'alpha:        ', alpha
-  print *, 'Hasp:         ', Hasp
-  print *, 'Rasp:         ', Rasp
+  print *, 'Gamma:        ', Gama
+  print *, 'eta:          ', eta
   print *, 'Nr:           ', Nr
   print *, 'Nz:           ', Nz
   print *, 'ned:          ', ned
@@ -156,7 +170,7 @@ program main_kedgeTop2DFD
     open(unit=1,file=restart(1:irestart),status='old',&
         form='unformatted')
     read(1) Nz1,Nr1,ned1,dz1,dr1,dt1,oldtime
-    read(1) Re1,Bo1,alpha1,f1,wf1,Hasp1,Rasp1
+    read(1) Re1,Bo1,alpha1,f1,wf1,Gama1,eta1
     read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
             ((wt(j,i),j=1,Nz),i=1,Nr),&
             ((Lt(j,i),j=1,Nz),i=1,Nr)
@@ -206,14 +220,16 @@ program main_kedgeTop2DFD
     end if
   end do
 
+  ir=1+0.5d0*(Nr-1) ! Needs to be outside of the if, used in BndConds to declare
+                    ! variables
   if (Bo == 0d0) then
-    call infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
+!    call infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
+    call infBoussinesqBC(vs,eta,r,Nr,regOpt)
     do i=1,Nr
       write(25,109) i, r(i), vs(i)
     enddo
   elseif (Bo > 0d0) then
 !   Create matrices to solve the contaminated free surface
-    ir=1+0.5d0*(Nr-1)
     !Lower diagonal
     ldiag(3:ir-ned)=Bo*(1/dr**2d0+1/(2d0*r(3:ir-ned)*dr))
     ldiag(ir-ned+1:ir)=0d0
@@ -232,25 +248,44 @@ program main_kedgeTop2DFD
 !-----time-stepping procedure-------------------------------------
   do m=1,Nsteps
     time=m*dt+oldtime
-      !First RK2 step
-      call rhs_wtLt(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
-      wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
-      Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
-      call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(wt_tmp,Lt_tmp,sf,Bo,wf,alpha,time,r,dr,dz,&
-                                        Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
-     !Second RK2 step
-      call rhs_wtLt(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
-      wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
-      Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
-      call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-      call BndConds(wt,Lt,sf,Bo,wf,alpha,time,r,dr,dz,&
-                                        Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
-!!      call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
-      call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
+!    print*, 'm = ',m
+    !First RK2 step
+    call rhs_wtLt(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+!    print*, 'check 1_1'
+    wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
+    Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
+    call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
+!    print*, 'check 1_2'
+!    if (m.eq.1) then
+!      print*, 'Bo    = ',Bo
+!      print*, 'wf    = ',wf
+!      print*, 'alpha = ',alpha
+!      print*, 'time  = ',time
+!      print*, 'dr    = ',dr
+!      print*, 'dz    = ',dz
+!      print*, 'Nz    = ',Nz
+!      print*, 'Nr    = ',Nr
+!      print*, 'ned   = ',ned
+!      print*, 'ir    = ',ir
+!    end if
+    call BndConds(wt_tmp,Lt_tmp,sf,Bo,wf,alpha,time,r,dr,dz,&
+                                      Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
+!    print*, 'check 1_3'
+    !Second RK2 step
+    call rhs_wtLt(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+!    print*, 'check 2_1'
+    wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
+    Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
+    call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
+!    print*, 'check 2_2'
+    call BndConds(wt,Lt,sf,Bo,wf,alpha,time,r,dr,dz,&
+                                      Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
+!    print*, 'check 2_3'
+!!    call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
+    call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs(wt,Lt,sf,Re,Bo,alpha,f,wf,Hasp,Rasp,Nz,Nr,ned,dz,dr,&
+      call graphs(wt,Lt,sf,Re,Bo,alpha,f,wf,Gama,eta,Nz,Nr,ned,dz,dr,&
                                                    dt,time,prefix,ix,init_file)
     end if
     if (mod(m,itseries).eq.0) then
