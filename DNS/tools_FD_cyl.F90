@@ -258,11 +258,11 @@ module tools_FD_cyl
         ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
         f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
         f(ir-ned) = f(ir-ned)-Bo*(1/dr**2d0-1/(2d0*r(ir-ned)*dr))*&
-                                  (1d0+alpha*cos(wf*time))*r(ir-ned+1)**2d0
-        f(ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
+                                  (1d0+alpha*dsin(wf*time))*r(ir-ned+1)**2d0
+        f(ir-ned+1:ir) = (1d0+alpha*dsin(wf*time))*r(ir-ned+1:ir)**2d0
         f(ir+1:Nr-1) = (-2d0*Lt(Nz-1,ir+1:Nr-1)+0.5d0*Lt(Nz-2,ir+1:Nr-1))/dz
         f(ir+1) = f(ir+1)-Bo*(1/dr**2d0+1/(2d0*r(ir+1)*dr))*&
-                                        (1d0+alpha*cos(wf*time))*r(ir)**2d0
+                                        (1d0+alpha*dsin(wf*time))*r(ir)**2d0
         a_int(1:ir-ned-2) = ldiag(3:ir-ned)
         b_int(1:ir-ned-1) = mdiag(2:ir-ned)
         c_int(1:ir-ned-2) = udiag(2:ir-ned-1)
@@ -283,7 +283,7 @@ module tools_FD_cyl
 
         ! Assign values to the angular momentum
         Lt(Nz,2:ir-ned) = f(2:ir-ned)
-        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
+        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*dsin(wf*time))*r(ir-ned+1:ir)**2d0
         Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
       endif
     end subroutine BC_kedgeTop
@@ -324,11 +324,11 @@ module tools_FD_cyl
         ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
         f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
         f(ir-ned) = f(ir-ned)-Bo*(1/dr**2d0-1/(2d0*r(ir-ned)*dr))*&
-                                  (1d0+alpha*cos(wf*time))*r(ir-ned+1)**2d0
-        f(ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
+                                  (1d0+alpha*dsin(wf*time))*r(ir-ned+1)**2d0
+        f(ir-ned+1:ir) = (1d0+alpha*dsin(wf*time))*r(ir-ned+1:ir)**2d0
         f(ir+1:Nr-1) = (-2d0*Lt(Nz-1,ir+1:Nr-1)+0.5d0*Lt(Nz-2,ir+1:Nr-1))/dz
         f(ir+1) = f(ir+1)-Bo*(1/dr**2d0+1/(2d0*r(ir+1)*dr))*&
-                                        (1d0+alpha*cos(wf*time))*r(ir)**2d0
+                                        (1d0+alpha*dsin(wf*time))*r(ir)**2d0
         a_int(1:ir-ned-2) = ldiag(3:ir-ned)
         b_int(1:ir-ned-1) = mdiag(2:ir-ned)
         c_int(1:ir-ned-2) = udiag(2:ir-ned-1)
@@ -349,7 +349,7 @@ module tools_FD_cyl
 
         ! Assign values to the angular momentum
         Lt(Nz,2:ir-ned) = f(2:ir-ned)
-        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
+        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*dsin(wf*time))*r(ir-ned+1:ir)**2d0
         Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
       endif
     end subroutine BC_freeSurfTop
