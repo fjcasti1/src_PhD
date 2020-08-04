@@ -5,7 +5,7 @@ program main_kedgeTop2DFD
   integer  :: Nz, Nz1, Nr, Nr1, ned, ned1, Nsteps, nsaves
   integer  :: i, j, m, ix, irestart, ir
   integer  :: igraph, itseries, ibegin, init_file, info
-  real*8   :: Re, Re1, Bo, Bo1, alpha, alpha1, f, f1, wf, wf1, simTU, NT, NtsT, T
+  real*8   :: Re, Re1, Bo, Bo1, Ro, Ro1, f, f1, wf, wf1, simTU, NT, NtsT, T
   real*8   :: ALT, RAD, Gama, eta, Gama1, eta1, Hasp, Rasp, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
@@ -27,7 +27,7 @@ program main_kedgeTop2DFD
   irestart=index(restart//' ',' ')-1
   read*, Bo
   read*, Re
-  read*, alpha
+  read*, Ro
   read*, wf
   read*, Gama
   read*, eta
@@ -73,10 +73,10 @@ program main_kedgeTop2DFD
   dr= RAD/(Nr-1)
   dz= ALT/(Nz-1)
 
-  if (alpha.gt.0d0.AND.wf.gt.0d0) then  ! Forced system
+  if (Ro.gt.0d0.AND.wf.gt.0d0) then  ! Forced system
     T  = 2.d0*PI/wf
     dt = T/NtsT
-  elseif (alpha.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
+  elseif (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
     T  = 2.d0*PI/wf
     dt = T/NtsT
 !    Nsteps = CEILING(NT/dt)
@@ -93,17 +93,17 @@ program main_kedgeTop2DFD
   print *, 'restart:      ', restart
   print *, 'Re:           ', Re
   print *, 'Bo:           ', Bo
-  if (alpha.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
+  if (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
     print *, 'wf:           ', 0
   endif
   print *, 'wf:           ', wf
-  print *, 'alpha:        ', alpha
+  print *, 'Ro:           ', Ro
   print *, 'Gamma:        ', Gama
   print *, 'eta:          ', eta
   print *, 'Nr:           ', Nr
   print *, 'Nz:           ', Nz
   print *, 'ned:          ', ned
-!  if (alpha.eq.0) then
+!  if (Ro.eq.0) then
 !    print *, 'dt:           ', dt
 !  endif
   print *, 'NtsT:         ', NtsT
@@ -117,10 +117,10 @@ program main_kedgeTop2DFD
   print *, 'Calculated:   '
   print *, 'dr:           ', dr
   print *, 'dz:           ', dz
-  if (alpha.eq.0d0.AND.wf.gt.0d0) then
+  if (Ro.eq.0d0.AND.wf.gt.0d0) then
     print *, 'Response Period:       ', T
     print *, 'dt:           ', dt
-  elseif (alpha.gt.0d0.AND.wf.gt.0d0) then
+  elseif (Ro.gt.0d0.AND.wf.gt.0d0) then
     print *, 'Forcing Period:       ', T
     print *, 'dt:           ', dt
   else
@@ -134,7 +134,7 @@ program main_kedgeTop2DFD
   print *, '======================================================='
   print *, ''
 
-  if (alpha.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
+  if (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
     wf = 0
   endif
   print*, 'Initializing Variables'
@@ -170,7 +170,7 @@ program main_kedgeTop2DFD
     open(unit=1,file=restart(1:irestart),status='old',&
         form='unformatted')
     read(1) Nz1,Nr1,ned1,dz1,dr1,dt1,oldtime
-    read(1) Re1,Bo1,alpha1,f1,wf1,Gama1,eta1
+    read(1) Re1,Bo1,Ro1,f1,wf1,Gama1,eta1
     read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
             ((wt(j,i),j=1,Nz),i=1,Nr),&
             ((Lt(j,i),j=1,Nz),i=1,Nr)
@@ -259,7 +259,7 @@ program main_kedgeTop2DFD
 !    if (m.eq.1) then
 !      print*, 'Bo    = ',Bo
 !      print*, 'wf    = ',wf
-!      print*, 'alpha = ',alpha
+!      print*, 'Ro = ',Ro
 !      print*, 'time  = ',time
 !      print*, 'dr    = ',dr
 !      print*, 'dz    = ',dz
@@ -268,7 +268,7 @@ program main_kedgeTop2DFD
 !      print*, 'ned   = ',ned
 !      print*, 'ir    = ',ir
 !    end if
-    call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,Bo,wf,alpha,time,r,dr,dz,&
+    call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,Bo,wf,Ro,time,r,dr,dz,&
                                       Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !    print*, 'check 1_3'
     !Second RK2 step
@@ -278,14 +278,14 @@ program main_kedgeTop2DFD
     Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
     call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
 !    print*, 'check 2_2'
-    call BC_freeSurfTop(wt,Lt,sf,Bo,wf,alpha,time,r,dr,dz,&
+    call BC_freeSurfTop(wt,Lt,sf,Bo,wf,Ro,time,r,dr,dz,&
                                       Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !    print*, 'check 2_3'
 !!    call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
     call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs(wt,Lt,sf,Re,Bo,alpha,f,wf,Gama,eta,Nz,Nr,ned,dz,dr,&
+      call graphs(wt,Lt,sf,Re,Bo,Ro,f,wf,Gama,eta,Nz,Nr,ned,dz,dr,&
                                                    dt,time,prefix,ix,init_file)
     end if
     if (mod(m,itseries).eq.0) then
