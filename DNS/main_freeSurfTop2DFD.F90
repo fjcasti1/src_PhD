@@ -220,7 +220,7 @@ program main_kedgeTop2DFD
     end if
   end do
 
-  ir=1+0.5d0*(Nr-1) ! Needs to be outside of the if, used in BndConds to declare
+  ir=1+0.5d0*(Nr-1) ! Needs to be outside of the if, used in BCs to declare
                     ! variables
   if (Bo == 0d0) then
 !    call infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
@@ -268,7 +268,7 @@ program main_kedgeTop2DFD
 !      print*, 'ned   = ',ned
 !      print*, 'ir    = ',ir
 !    end if
-    call BndConds(wt_tmp,Lt_tmp,sf,Bo,wf,alpha,time,r,dr,dz,&
+    call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,Bo,wf,alpha,time,r,dr,dz,&
                                       Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !    print*, 'check 1_3'
     !Second RK2 step
@@ -278,7 +278,7 @@ program main_kedgeTop2DFD
     Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
     call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
 !    print*, 'check 2_2'
-    call BndConds(wt,Lt,sf,Bo,wf,alpha,time,r,dr,dz,&
+    call BC_freeSurfTop(wt,Lt,sf,Bo,wf,alpha,time,r,dr,dz,&
                                       Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
 !    print*, 'check 2_3'
 !!    call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)

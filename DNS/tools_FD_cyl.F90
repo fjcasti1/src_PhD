@@ -222,7 +222,7 @@ module tools_FD_cyl
     return
     end subroutine printAnalyticText
 
-    subroutine BndConds(wt, Lt, sf, Bo, wf, alpha, time, r, dr, dz,&
+    subroutine BC_kedgeTop(wt, Lt, sf, Bo, wf, alpha, time, r, dr, dz,&
                            Nz, Nr, ned, ldiag, mdiag, udiag, ir, vs)
       implicit none
       integer :: i, Nz, Nr, ned, ir, info
@@ -286,7 +286,73 @@ module tools_FD_cyl
         Lt(Nz,ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
         Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
       endif
-    end subroutine BndConds
+    end subroutine BC_kedgeTop
+
+    subroutine BC_freeSurfTop(wt, Lt, sf, Bo, wf, alpha, time, r, dr, dz,&
+                           Nz, Nr, ned, ldiag, mdiag, udiag, ir, vs)
+      implicit none
+      integer :: i, Nz, Nr, ned, ir, info
+      real*8  :: Bo, wf, alpha, time, dr, dz
+      real*8, dimension(Nr)       :: r, vs
+      real*8, dimension(Nz,Nr)    :: wt, Lt, sf
+      real*8, dimension(2:Nr-1)   :: f
+      real*8, dimension(3:Nr-1)   :: ldiag
+      real*8, dimension(2:Nr-1)   :: mdiag
+      real*8, dimension(2:Nr-2)   :: udiag
+      real*8, dimension(ir-ned-2) :: a_int, c_int
+      real*8, dimension(ir-ned-1) :: b_int
+      real*8, dimension(Nr-ir-2)  :: a_ext, c_ext
+      real*8, dimension(Nr-ir-1)  :: b_ext
+    !---Left and Right Boundaries---!
+      !The stream function is zero at the boundaries there is no need to update
+      !since we only updated the interior
+      wt(:,1)  = 0d0
+      Lt(:,1)  = 0d0
+      wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
+      Lt(:,Nr) = 0d0
+    !---Bottom Boundary---!
+      Lt(1,2:Nr-1) = 0d0
+      wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
+    !---Top Boundary, Contaminated Free Surface---!
+      wt(Nz,2:Nr-1) = (0.5d0*sf(Nz-2,2:Nr-1)-4d0*sf(Nz-1,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
+      if (Bo == 0d0) then
+        do i=2,Nr-1
+          Lt(Nz,i) = vs(i)*r(i)
+        enddo
+      else
+        ! Calculate the right hand side of the ang momentum equation
+        ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
+        f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
+        f(ir-ned) = f(ir-ned)-Bo*(1/dr**2d0-1/(2d0*r(ir-ned)*dr))*&
+                                  (1d0+alpha*cos(wf*time))*r(ir-ned+1)**2d0
+        f(ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
+        f(ir+1:Nr-1) = (-2d0*Lt(Nz-1,ir+1:Nr-1)+0.5d0*Lt(Nz-2,ir+1:Nr-1))/dz
+        f(ir+1) = f(ir+1)-Bo*(1/dr**2d0+1/(2d0*r(ir+1)*dr))*&
+                                        (1d0+alpha*cos(wf*time))*r(ir)**2d0
+        a_int(1:ir-ned-2) = ldiag(3:ir-ned)
+        b_int(1:ir-ned-1) = mdiag(2:ir-ned)
+        c_int(1:ir-ned-2) = udiag(2:ir-ned-1)
+
+        a_ext(1:Nr-ir-2) = ldiag(ir+2:Nr-1)
+        b_ext(1:Nr-ir-1) = mdiag(ir+1:Nr-1)
+        c_ext(1:Nr-ir-2) = udiag(ir+1:Nr-2)
+
+        call dgtsv(ir-ned-1,1,a_int,b_int,c_int,f(2:ir-ned),ir-ned-1,info)
+        if(info.ne.0) then
+          print*, 'dgtsv1 INFO:   ',info
+        end if
+
+        call dgtsv(Nr-1-ir,1,a_ext,b_ext,c_ext,f(ir+1:Nr-1),Nr-1-ir,info)
+        if(info.ne.0) then
+          print*, 'dgtsv2 INFO:   ',info
+        end if
+
+        ! Assign values to the angular momentum
+        Lt(Nz,2:ir-ned) = f(2:ir-ned)
+        Lt(Nz,ir-ned+1:ir) = (1d0+alpha*cos(wf*time))*r(ir-ned+1:ir)**2d0
+        Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
+      endif
+    end subroutine BC_freeSurfTop
 
     subroutine kineticEnergy(Ek, e, Lt, r, DsfDr, DsfDz, Nz, Nr, dz, dr)
       implicit none
