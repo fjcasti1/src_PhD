@@ -223,7 +223,6 @@ program main_kedgeTop2DFD
   ir=1+0.5d0*(Nr-1) ! Needs to be outside of the if, used in BCs to declare
                     ! variables
   if (Bo == 0d0) then
-!    call infBoussinesqBC(vs,r,Nr,Rasp,regOpt)
     call infBoussinesqBC(vs,eta,r,Nr,regOpt)
     do i=1,Nr
       write(25,109) i, r(i), vs(i)
@@ -248,40 +247,20 @@ program main_kedgeTop2DFD
 !-----time-stepping procedure-------------------------------------
   do m=1,Nsteps
     time=m*dt+oldtime
-!    print*, 'm = ',m
     !First RK2 step
     call rhs_wtLt(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
-!    print*, 'check 1_1'
     wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
     Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
     call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-!    print*, 'check 1_2'
-!    if (m.eq.1) then
-!      print*, 'Bo    = ',Bo
-!      print*, 'wf    = ',wf
-!      print*, 'Ro = ',Ro
-!      print*, 'time  = ',time
-!      print*, 'dr    = ',dr
-!      print*, 'dz    = ',dz
-!      print*, 'Nz    = ',Nz
-!      print*, 'Nr    = ',Nr
-!      print*, 'ned   = ',ned
-!      print*, 'ir    = ',ir
-!    end if
     call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,Bo,wf,Ro,time,r,dr,dz,&
                                       Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
-!    print*, 'check 1_3'
     !Second RK2 step
     call rhs_wtLt(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
-!    print*, 'check 2_1'
     wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
     Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
     call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-!    print*, 'check 2_2'
     call BC_freeSurfTop(wt,Lt,sf,Bo,wf,Ro,time,r,dr,dz,&
                                       Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
-!    print*, 'check 2_3'
-!!    call kineticEnergy(Ek,ekk,g,r,DsDr,DsDz,Nz,Nr,dz,dr)
     call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
