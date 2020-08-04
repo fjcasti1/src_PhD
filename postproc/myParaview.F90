@@ -377,8 +377,8 @@ subroutine velvort(nr,nx,nz,nn,vr,vt,vz,r,dr1,dz1, &
 ! notice that aspect ratio = radius / height (Benard convection)
 ! and so h1, RAD and ALT must be appropriately defined
   h1=gama ; nx=2*nr+1
-!  RAD=1d0 ; ALT=gama
-  RAD=gama ; ALT=1d0 ! IT WAS LIKE THIS!
+  RAD=1d0 ; ALT=gama
+!  RAD=gama ; ALT=1d0 ! IT WAS LIKE THIS!
   in(1) = 1
   in(2) = 2
 
