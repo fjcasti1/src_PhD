@@ -21,15 +21,15 @@ LIBPLP = -lplplotd -lplplotf77d -lplplotf77cd
 .PHONY: clean
 
 # default rule
-main_freeSurfTop: $(OBJS_freeSurfTop)
-	module purge; \
-	module load intel/2019.4; \
-	$(FC) $(FLG) $(OBJS_freeSurfTop) $(LIB) -o ../../bin/$@
-
 main_freeSurfTop2DFD: $(OBJS_freeSurfTop2DFD)
 	module purge; \
 	module load intel/2019.4; \
 	$(FC) $(FLG) $(OBJS_freeSurfTop2DFD) $(LIB) -o ../../bin/$@
+
+main_freeSurfTop: $(OBJS_freeSurfTop)
+	module purge; \
+	module load intel/2019.4; \
+	$(FC) $(FLG) $(OBJS_freeSurfTop) $(LIB) -o ../../bin/$@
 
 main_kedgeTop: $(OBJS_kedgeTop)
 	module purge; \
