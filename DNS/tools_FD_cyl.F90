@@ -56,7 +56,7 @@ module tools_FD_cyl
       end do
     ! Solve the system A*Psi=rhs with A=L*D*L^T for the interior
 
-      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1.0d0,sf(2:Nz-1,2:Nr-1),Nz-2,Pinv,Nr-2,0.0d0,Lt,Nz-2)
+      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1d0,sf(2:Nz-1,2:Nr-1),Nz-2,Pinv,Nr-2,0d0,Lt,Nz-2)
 
       do j=2,Nr-1
         call dpttrs(Nz-2,1,D(2:Nz-1,j),L(2:Nz-2,j),Lt(2:Nz-1,j),Nz-2,info)
@@ -65,7 +65,7 @@ module tools_FD_cyl
         end if
       end do
 
-      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1.0d0,Lt,Nz-2,P,Nr-2,0.0d0,sf(2:Nz-1,2:Nr-1),Nz-2)
+      call dgemm('n','t',Nz-2,Nr-2,Nr-2,1d0,Lt,Nz-2,P,Nr-2,0d0,sf(2:Nz-1,2:Nr-1),Nz-2)
 
     ! The previous multiplication automatically updated the interior values of
     ! the stream function, the boundary conditions are zero in this problem so
@@ -240,12 +240,12 @@ module tools_FD_cyl
     !---Left and Right Boundaries---!
       !The stream function is zero at the boundaries there is no need to update
       !since we only updated the interior
-      wt(:,1)  = 0.0d0
-      Lt(:,1)  = 0.0d0
+      wt(:,1)  = 0d0
+      Lt(:,1)  = 0d0
       wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
-      Lt(:,Nr) = 0.0d0
+      Lt(:,Nr) = 0d0
     !---Bottom Boundary---!
-      Lt(1,2:Nr-1) = 0.0d0
+      Lt(1,2:Nr-1) = 0d0
       wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
     !---Top Boundary, Contaminated Free Surface---!
       wt(Nz,2:Nr-1) = (0.5d0*sf(Nz-2,2:Nr-1)-4d0*sf(Nz-1,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
