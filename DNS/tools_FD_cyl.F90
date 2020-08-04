@@ -237,7 +237,6 @@ module tools_FD_cyl
       real*8, dimension(ir-ned-1) :: b_int
       real*8, dimension(Nr-ir-2)  :: a_ext, c_ext
       real*8, dimension(Nr-ir-1)  :: b_ext
-!      print*, 'check B_0'
     !---Left and Right Boundaries---!
       !The stream function is zero at the boundaries there is no need to update
       !since we only updated the interior
@@ -245,21 +244,16 @@ module tools_FD_cyl
       Lt(:,1)  = 0.0d0
       wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
       Lt(:,Nr) = 0.0d0
-!      print*, 'check B_1'
     !---Bottom Boundary---!
       Lt(1,2:Nr-1) = 0.0d0
       wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
-      print*, 'check B_2'
     !---Top Boundary, Contaminated Free Surface---!
       wt(Nz,2:Nr-1) = (0.5d0*sf(Nz-2,2:Nr-1)-4d0*sf(Nz-1,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
-!      print*, 'check B_3'
       if (Bo == 0d0) then
         do i=2,Nr-1
           Lt(Nz,i) = vs(i)*r(i)
         enddo
-!       print*, 'check B_4'
       else
-!        print*, 'check NO_ENTRY'
         ! Calculate the right hand side of the ang momentum equation
         ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
         f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
