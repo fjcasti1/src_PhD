@@ -6,7 +6,7 @@ program main_kedgeTop2DFD
   integer  :: i, j, m, ix, irestart, ir
   integer  :: igraph, itseries, ibegin, init_file, info
   real*8   :: Re, Re1, Bo, Bo1, Ro, Ro1, f, f1, wf, wf1, simTU, NT, NtsT, T
-  real*8   :: ALT, RAD, Gama, eta, Gama1, eta1, Hasp, Rasp, dr, dr1, dz, dz1
+  real*8   :: ALT, RAD, Gama, eta, Gama1, eta1, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
   integer, dimension(:),   allocatable :: ipiv
@@ -43,17 +43,6 @@ program main_kedgeTop2DFD
   read*, init_file
   read*, ibegin     ! controls the start/restart process
 
-! Conversion from the spectral geometric formulation to the FD.
-! In the spectral case, we have defined the characteristic length to be R
-! instead of a. Hence, we need to apply the following two equations. We go
-! through that trouble to be able to match the values Gamma and eta from one
-! code to another and have the conversion to be made in the FD DNS, instead of
-! grabbing a piece of paper every time.
-! To be clear, the FD has different length scales, we only input the Gamma and
-! eta values for convenience, then they are transformed to Rasp, Hasp.
-! Gamma = H/R, eta  = a/R
-! Hasp  = H/a, Rasp = R/a
-
 ! ===========
 ! = Scaling =
 ! ==========
@@ -64,14 +53,9 @@ program main_kedgeTop2DFD
 
   ALT = Gama
   RAD = 1d0
-  Hasp = Gama/eta
-  Rasp =  1d0/eta
 
-  dr= Rasp/(Nr-1)
-  dz= Hasp/(Nz-1)
-
-  dr= RAD/(Nr-1)
-  dz= ALT/(Nz-1)
+  dr = RAD/(Nr-1)
+  dz = ALT/(Nz-1)
 
   if (Ro.gt.0d0.AND.wf.gt.0d0) then  ! Forced system
     T  = 2.d0*PI/wf
