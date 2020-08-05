@@ -38,6 +38,35 @@ module tools_FD_cyl
       end do
     end subroutine rhs_wtLt
 
+    subroutine rhs_c(c, sf, Pe, r, dz, dr, Nz, Nr, c_rhs)
+      implicit none
+      integer              :: j
+      integer, intent(in)  :: Nz, Nr
+      real*8 , intent(in)  :: Pe, dz, dr
+      real*8               :: Dr_cDsfDz, DcDr, D2cDr2
+      real*8 , dimension(Nr)                  :: DsfDz
+      real*8 , dimension(Nr)    , intent(in)  :: r, c
+      real*8 , dimension(Nz,Nr) , intent(in)  :: sf
+      real*8 , dimension(2:Nr-1), intent(out) :: c_rhs
+      ! Although DsfDz was computed in other subroutines, it is done only for
+      ! the interior. Here we need it for the surface. It will be done
+      ! internally and not saved since we don't need it elsewhere
+      do j=1,Nr
+        DsfDz(j)  = (sf(Nz-2,j)-4d0*sf(Nz-1,j))/(2d0*dz)
+      end do
+      ! Now we use DsfDz to compute Dr_cDsfDz, and later the RHS for the
+      ! concentration equation at each r(j)
+      do j=2,Nr-1
+      ! First derivatives with respect to r
+        Dr_cDsfDz = (c(j+1)*DsfDz(j+1)-c(j-1)*DsfDz(j-1))/(2d0*dr)
+        DcDr      = (c(j+1)-c(j-1))/(2d0*dr)
+      ! Second derivatives with respect to r
+        D2cDr2    = (c(j-1)-2d0*c(j)+c(j+1))/(dr**2d0)
+      ! Right hand side of the vorticity and angular momentum
+        c_rhs(j)  = Dr_cDsfDz/r(j)+(D2cDr2+DcDr/r(j))/Pe
+      end do
+    end subroutine rhs_c
+
     subroutine solve_streamfn(wt, sf, r, dz, L, D, Nz, Nr, P, Pinv)
       implicit none
       integer                           :: i, j, Nz, Nr, info
@@ -288,71 +317,88 @@ module tools_FD_cyl
       endif
     end subroutine BC_kedgeTop
 
-    subroutine BC_freeSurfTop(wt, Lt, sf, Bo, wf, Ro, time, r, dr, dz,&
-                           Nz, Nr, ned, ldiag, mdiag, udiag, ir, vs)
+    subroutine solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr,c_tmp,c_rhs)
       implicit none
-      integer :: i, Nz, Nr, ned, ir, info
-      real*8  :: Bo, wf, Ro, time, dr, dz
-      real*8, dimension(Nr)       :: r, vs
+      integer :: Nz, Nr
+      real*8  :: Pe, dz, dr, dt
+      real*8, dimension(Nr) :: r, c, c_tmp, c_rhs
+      real*8, dimension(Nz,Nr) :: sf
+    !-- Solves the concentration with a predictor-corrector method
+
+      !First RK2 step
+      call rhs_c(c,sf,Pe,r,dz,dr,Nz,Nr,c_rhs)
+      c_tmp(2:Nr-1) = c(2:Nr-1) + dt*c_rhs(2:Nr-1)
+      c_tmp(1)  = c_tmp(2)
+      c_tmp(Nr) = c_tmp(Nr-1)
+
+      !Second RK2 step
+      call rhs_c(c_tmp,sf,Pe,r,dz,dr,Nz,Nr,c_rhs)
+      c(2:Nr-1) = 0.5d0*(c(2:Nr-1) + c_tmp(2:Nr-1) + dt*c_rhs(2:Nr-1))
+      c(1)  = c(2)
+      c(Nr) = c(Nr-1)
+    end subroutine solve_concentration
+
+    subroutine BC_freeSurfTop(wt, Lt, sf, c, Ca, wf, Ro, time, r, dr, dz,&
+                           Nz, Nr)
+      implicit none
+      integer :: i, Nz, Nr
+      real*8  :: Ca, wf, Ro, time, dr, dz
+      real*8, dimension(Nr)       :: r, c, sigma
       real*8, dimension(Nz,Nr)    :: wt, Lt, sf
-      real*8, dimension(2:Nr-1)   :: f
-      real*8, dimension(3:Nr-1)   :: ldiag
-      real*8, dimension(2:Nr-1)   :: mdiag
-      real*8, dimension(2:Nr-2)   :: udiag
-      real*8, dimension(ir-ned-2) :: a_int, c_int
-      real*8, dimension(ir-ned-1) :: b_int
-      real*8, dimension(Nr-ir-2)  :: a_ext, c_ext
-      real*8, dimension(Nr-ir-1)  :: b_ext
-    !---Left and Right Boundaries---!
+      real*8, dimension(2:Nr-1)   :: DsigmaDr
       !The stream function is zero at the boundaries there is no need to update
       !since we only updated the interior
-      wt(:,1)  = 0d0
+
+    !--- Left Boundary, symmetry axis ---!
       Lt(:,1)  = 0d0
-      wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
+      wt(:,1)  = 0d0  ! CHECK HERE, POSSIBLE BUG?
+
+    !--- Right Boundary, side wall (no-slip) ---!
       Lt(:,Nr) = 0d0
-    !---Bottom Boundary---!
-      Lt(1,2:Nr-1) = 0d0
+      wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
+
+    !--- Bottom Boundary, rotating no-slip ---!
+      Lt(1,2:Nr-1) = (1+Ro*dsin(wf*time))*r(2:Nr-1)**2d0
       wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
-    !---Top Boundary, Contaminated Free Surface---!
-      wt(Nz,2:Nr-1) = (0.5d0*sf(Nz-2,2:Nr-1)-4d0*sf(Nz-1,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
-      if (Bo == 0d0) then
-        do i=2,Nr-1
-          Lt(Nz,i) = vs(i)*r(i)
-        enddo
-      else
-        ! Calculate the right hand side of the ang momentum equation
-        ! CAREFUL IF BCs ARE NOT ZERO AT THE EDGES
-        f(2:ir-ned) = (-2d0*Lt(Nz-1,2:ir-ned)+0.5d0*Lt(Nz-2,2:ir-ned))/dz
-        f(ir-ned) = f(ir-ned)-Bo*(1/dr**2d0-1/(2d0*r(ir-ned)*dr))*&
-                                  (1d0+Ro*dsin(wf*time))*r(ir-ned+1)**2d0
-        f(ir-ned+1:ir) = (1d0+Ro*dsin(wf*time))*r(ir-ned+1:ir)**2d0
-        f(ir+1:Nr-1) = (-2d0*Lt(Nz-1,ir+1:Nr-1)+0.5d0*Lt(Nz-2,ir+1:Nr-1))/dz
-        f(ir+1) = f(ir+1)-Bo*(1/dr**2d0+1/(2d0*r(ir+1)*dr))*&
-                                        (1d0+Ro*dsin(wf*time))*r(ir)**2d0
-        a_int(1:ir-ned-2) = ldiag(3:ir-ned)
-        b_int(1:ir-ned-1) = mdiag(2:ir-ned)
-        c_int(1:ir-ned-2) = udiag(2:ir-ned-1)
 
-        a_ext(1:Nr-ir-2) = ldiag(ir+2:Nr-1)
-        b_ext(1:Nr-ir-1) = mdiag(ir+1:Nr-1)
-        c_ext(1:Nr-ir-2) = udiag(ir+1:Nr-2)
-
-        call dgtsv(ir-ned-1,1,a_int,b_int,c_int,f(2:ir-ned),ir-ned-1,info)
-        if(info.ne.0) then
-          print*, 'dgtsv1 INFO:   ',info
-        end if
-
-        call dgtsv(Nr-1-ir,1,a_ext,b_ext,c_ext,f(ir+1:Nr-1),Nr-1-ir,info)
-        if(info.ne.0) then
-          print*, 'dgtsv2 INFO:   ',info
-        end if
-
-        ! Assign values to the angular momentum
-        Lt(Nz,2:ir-ned) = f(2:ir-ned)
-        Lt(Nz,ir-ned+1:ir) = (1d0+Ro*dsin(wf*time))*r(ir-ned+1:ir)**2d0
-        Lt(Nz,ir+1:Nr-1) = f(ir+1:Nr-1)
-      endif
+    !--- Top Boundary, Contaminated Free Surface ---!
+      call stateEq_surfTension(sigma, c, Nr)
+      do i=2,Nr-1
+        DsigmaDr(i) = (sigma(i+1)-sigma(i-1))/(2d0*dr)
+      end do
+      Lt(Nz,2:Nr-1) = Lt(Nz-1,2:Nr-1) ! CHECK ORDER OF THIS
+      wt(Nz,2:Nr-1) = DsigmaDr(2:Nr-1)/Ca
     end subroutine BC_freeSurfTop
+
+    subroutine stateEq_surfTension(sigma, c, Nr)
+      implicit none
+      integer, intent(in)  :: Nr
+      real*8 , dimension(Nr) , intent(in)    :: c
+      real*8 , dimension(Nr) , intent(inout) :: sigma
+      real*8 :: sigma0, a0, a1, a2, a3, a4, a5, a6
+      ! Equation of State fitting from:
+      ! Hirsa, Lopez & Miraghaie (2001)
+      sigma0 =  72.4d0
+      a0     =  1.108d0
+      a1     =  32.37d0
+      a2     =  20.11d0
+      a3     =  97.04d0
+      a4     = -45.90d0
+      a5     =  sigma0
+      a6     = -00.15d0
+
+!      do i=1,Nr
+!        sigma(i) = ((a2+a3*c(i)+a4*c(i)**2d0)/(1d0+dexp(a1*(a0-c(i)))) +
+!                    (a5+a6*c(i)**2d0)/(1d0+dexp(a1*(c(i)-a0))))/sigma0
+!      end do
+
+!      sigma(:) = ((a2+a3*c(:)+a4*c(:)**2d0)/(1d0+dexp(a1*(a0-c(:)))) +
+!                    (a5+a6*c(:)**2d0)/(1d0+dexp(a1*(c(:)-a0))))/sigma0
+
+      sigma = ((a2+a3*c+a4*c**2d0)/(1d0+dexp(a1*(a0-c))) + &
+                    (a5+a6*c**2d0)/(1d0+dexp(a1*(c-a0))))/sigma0
+
+    end subroutine stateEq_surfTension
 
     subroutine kineticEnergy(Ek, e, Lt, r, DsfDr, DsfDz, Nz, Nr, dz, dr)
       implicit none

@@ -3,16 +3,16 @@ program main_kedgeTop2DFD
   implicit none
   logical  :: existe, regOpt
   integer  :: Nz, Nz1, Nr, Nr1, ned, ned1, Nsteps, nsaves
-  integer  :: i, j, m, ix, irestart, ir
+  integer  :: i, j, m, ix, irestart
   integer  :: igraph, itseries, ibegin, init_file, info
-  real*8   :: Re, Re1, Bo, Bo1, Ro, Ro1, f, f1, wf, wf1, simTU, NT, NtsT, T
+  real*8   :: Ca, Ca1, Re, Re1, Pe, Pe1, Ro, Ro1, f, f1, wf, wf1, simTU, NT, NtsT, T
   real*8   :: ALT, RAD, Gama, eta, Gama1, eta1, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
   integer, dimension(:),   allocatable :: ipiv
   real*8,  dimension(:),   allocatable :: ldiag, mdiag, udiag
   real*8,  dimension(:),   allocatable :: eigRe, eigIm
-  real*8,  dimension(:),   allocatable :: r, vs
+  real*8,  dimension(:),   allocatable :: r, c, c_tmp, c_rhs
   real*8,  dimension(:,:), allocatable :: wt, Lt, sf, wt_tmp, Lt_tmp
   real*8,  dimension(:,:), allocatable :: wt_rhs, Lt_rhs, DsfDz, DsfDr, DLtDz, DLtDr, ekk, egg, exx
   real*8,  dimension(:,:), allocatable :: L, D, B, P, Paux, Pinv, dumeig
@@ -25,7 +25,7 @@ program main_kedgeTop2DFD
   ix=index(prefix//' ',' ')-1
   read*, restart   ! name of restart file
   irestart=index(restart//' ',' ')-1
-  read*, Bo
+  read*, Pe
   read*, Re
   read*, Ro
   read*, wf
@@ -76,7 +76,7 @@ program main_kedgeTop2DFD
   print *, 'prefix:       ', prefix
   print *, 'restart:      ', restart
   print *, 'Re:           ', Re
-  print *, 'Bo:           ', Bo
+  print *, 'Pe:           ', Pe
   if (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
     print *, 'wf:           ', 0
   endif
@@ -154,7 +154,7 @@ program main_kedgeTop2DFD
     open(unit=1,file=restart(1:irestart),status='old',&
         form='unformatted')
     read(1) Nz1,Nr1,ned1,dz1,dr1,dt1,oldtime
-    read(1) Re1,Bo1,Ro1,f1,wf1,Gama1,eta1
+    read(1) Re1,Pe1,Ro1,f1,wf1,Gama1,eta1
     read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
             ((wt(j,i),j=1,Nz),i=1,Nr),&
             ((Lt(j,i),j=1,Nz),i=1,Nr)
@@ -204,51 +204,32 @@ program main_kedgeTop2DFD
     end if
   end do
 
-  ir=1+0.5d0*(Nr-1) ! Needs to be outside of the if, used in BCs to declare
-                    ! variables
-  if (Bo == 0d0) then
-    call infBoussinesqBC(vs,eta,r,Nr,regOpt)
-    do i=1,Nr
-      write(25,109) i, r(i), vs(i)
-    enddo
-  elseif (Bo > 0d0) then
-!   Create matrices to solve the contaminated free surface
-    !Lower diagonal
-    ldiag(3:ir-ned)=Bo*(1/dr**2d0+1/(2d0*r(3:ir-ned)*dr))
-    ldiag(ir-ned+1:ir)=0d0
-    ldiag(ir+1:Nr-1)=Bo*(1/dr**2d0+1/(2d0*r(ir+1:Nr-1)*dr))
-    !Main diagonal
-    mdiag(2:ir-ned)=-2d0*Bo/dr**2d0-0.5d0*3/dz
-    mdiag(ir-ned+1:ir)=1d0
-    mdiag(ir+1:Nr-1)=-2d0*Bo/dr**2d0-0.5d0*3/dz
-    !Upper diagonal
-    udiag(2:ir-ned)=Bo*(1/dr**2d0-1/(2d0*r(2:ir-ned)*dr))
-    udiag(ir-ned+1:ir)=0d0
-    udiag(ir+1:Nr-2)=Bo*(1/dr**2d0-1/(2d0*r(ir+1:Nr-2)*dr))
-  endif
-
   print*, 'Starting time-stepping procedure'
 !-----time-stepping procedure-------------------------------------
   do m=1,Nsteps
     time=m*dt+oldtime
+
     !First RK2 step
     call rhs_wtLt(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
     wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
     Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
     call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-    call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,Bo,wf,Ro,time,r,dr,dz,&
-                                      Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
+    call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr,c_tmp,c_rhs)
+    call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,c,Ca,wf,Ro,time,r,dr,dz,Nz,Nr)
+
     !Second RK2 step
     call rhs_wtLt(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
     wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
     Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
     call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-    call BC_freeSurfTop(wt,Lt,sf,Bo,wf,Ro,time,r,dr,dz,&
-                                      Nz,Nr,ned,ldiag,mdiag,udiag,ir,vs)
+    call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr,c_tmp,c_rhs)
+    call BC_freeSurfTop(wt,Lt,sf,c,Ca,wf,Ro,time,r,dr,dz,Nz,Nr)
+! ::::::::::::::::::::::::::::::
+
     call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs(wt,Lt,sf,Re,Bo,Ro,f,wf,Gama,eta,Nz,Nr,ned,dz,dr,&
+      call graphs(wt,Lt,sf,Re,Pe,Ro,f,wf,Gama,eta,Nz,Nr,ned,dz,dr,&
                                                    dt,time,prefix,ix,init_file)
     end if
     if (mod(m,itseries).eq.0) then
@@ -264,7 +245,7 @@ program main_kedgeTop2DFD
       allocate(wt(Nz,Nr))
       allocate(Lt(Nz,Nr))    !Nr and Nz must be number of NODES
       allocate(sf(Nz,Nr))
-      allocate(vs(Nr))
+      allocate( c(Nr))
     ! Define the radial and vertical vectors r and z
       allocate(r(Nr))
         do i=1,Nr
