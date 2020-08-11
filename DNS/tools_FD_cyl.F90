@@ -342,8 +342,8 @@ module tools_FD_cyl
                            Nz, Nr)
       implicit none
       integer :: i, Nz, Nr
-      real*8  :: Ca, wf, Ro, time, dr, dz
-      real*8, dimension(Nr)       :: r, c, sigma
+      real*8  :: Ca, wf, Ro, time, dr, dz, den
+      real*8, dimension(Nr)       :: r, c, sigma, mu_s, k_s
       real*8, dimension(Nz,Nr)    :: wt, Lt, sf
       real*8, dimension(2:Nr-1)   :: DsigmaDr
       !The stream function is zero at the boundaries there is no need to update
@@ -362,43 +362,68 @@ module tools_FD_cyl
       wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
 
     !--- Top Boundary, Contaminated Free Surface ---!
-      call stateEq_surfTension(sigma, c, Nr)
+      call stateEq_surfTension(sigma, c, Nr,'tanh')
+      call stateEq_surfShearVisc(mu_s, c, Nr)
+!      call stateEq_surfDilatVisc(k_s, mu_s, Nr)
+      k_s = 10d0*mu_s
       do i=2,Nr-1
+        !-- Condition for angular momentum --!
+        ! Denominator first
+        den = 3d0*dr/(2d0*dz)+2d0*mu_s(i)/dr+(mu_s(i+1)-mu_s(i-1))/r(i)
+        Lt(Nz,i) = (mu_s(i)*(Lt(Nz,i+1)+Lt(Nz,i-1))/dr &
+                  -mu_s(i)*(Lt(Nz,i+1)-Lt(Nz,i-1))/(2d0*r(i)) &
+                  +(mu_s(i+1)-mu_s(i-1))*(Lt(Nz,i+1)-Lt(Nz,i-1))/(4d0*dr)&
+                  -(Lt(Nz-2,i)-4d0*Lt(Nz-1,i))*dr/(2d0*dz))/den
+        !-- Condition for azimuthal vorticity --!
         DsigmaDr(i) = (sigma(i+1)-sigma(i-1))/(2d0*dr)
       end do
-      Lt(Nz,2:Nr-1) = Lt(Nz-1,2:Nr-1) ! CHECK ORDER OF THIS
       wt(Nz,2:Nr-1) = DsigmaDr(2:Nr-1)/Ca
     end subroutine BC_freeSurfTop
 
-    subroutine stateEq_surfTension(sigma, c, Nr)
+    subroutine stateEq_surfTension(sigma, c, Nr, option)
       implicit none
+      character(len=*), intent(in) :: option
       integer, intent(in)  :: Nr
       real*8 , dimension(Nr) , intent(in)    :: c
       real*8 , dimension(Nr) , intent(inout) :: sigma
       real*8 :: sigma0, a0, a1, a2, a3, a4, a5, a6
-      ! Equation of State fitting from:
-      ! Hirsa, Lopez & Miraghaie (2001)
-      sigma0 =  72.4d0
-      a0     =  1.108d0
-      a1     =  32.37d0
-      a2     =  20.11d0
-      a3     =  97.04d0
-      a4     = -45.90d0
-      a5     =  sigma0
-      a6     = -00.15d0
-
-!      do i=1,Nr
-!        sigma(i) = ((a2+a3*c(i)+a4*c(i)**2d0)/(1d0+dexp(a1*(a0-c(i)))) +
-!                    (a5+a6*c(i)**2d0)/(1d0+dexp(a1*(c(i)-a0))))/sigma0
-!      end do
-
-!      sigma(:) = ((a2+a3*c(:)+a4*c(:)**2d0)/(1d0+dexp(a1*(a0-c(:)))) +
-!                    (a5+a6*c(:)**2d0)/(1d0+dexp(a1*(c(:)-a0))))/sigma0
-
-      sigma = ((a2+a3*c+a4*c**2d0)/(1d0+dexp(a1*(a0-c))) + &
-                    (a5+a6*c**2d0)/(1d0+dexp(a1*(c-a0))))/sigma0
+      if (option == 'tanh' ) then
+        ! Equation of State fitting from:
+        ! Lopez & Hirsa (2000)
+        sigma0 = 66
+        a0     = 6.3
+        a1     = 6.2
+        sigma  = 1 + (a0/sigma0)*dtanh(a1*(1-c))
+      elseif (option == 'exp') then
+        ! Equation of State fitting from:
+        ! Hirsa, Lopez & Miraghaie (2001)
+        sigma0 =  72.4d0
+        a0     =  1.108d0
+        a1     =  32.37d0
+        a2     =  20.11d0
+        a3     =  97.04d0
+        a4     = -45.90d0
+        a5     =  sigma0
+        a6     = -00.15d0
+        sigma  = ((a2+a3*c+a4*c**2d0)/(1d0+dexp(a1*(a0-c))) + &
+                      (a5+a6*c**2d0)/(1d0+dexp(a1*(c-a0))))/sigma0
+      endif
 
     end subroutine stateEq_surfTension
+
+    subroutine stateEq_surfShearVisc(mu_s, c, Nr)
+      implicit none
+      integer, intent(in)  :: Nr
+      real*8 , dimension(Nr) , intent(in)    :: c
+      real*8 , dimension(Nr) , intent(inout) :: mu_s
+      real*8 :: a0, a1
+      ! Equation of State fitting from:
+      ! Lopez & Hirsa (2000)
+      a0   = 1.15d-3
+      a1   = 2.6d0
+      mu_s = a0*(dexp(a1*c)-1)
+
+    end subroutine stateEq_surfShearVisc
 
     subroutine kineticEnergy(Ek, e, Lt, r, DsfDr, DsfDz, Nz, Nr, dz, dr)
       implicit none
