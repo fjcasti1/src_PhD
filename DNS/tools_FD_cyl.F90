@@ -345,7 +345,8 @@ module tools_FD_cyl
       real*8  :: Ca, wf, Ro, time, dr, dz, den
       real*8, dimension(Nr)       :: r, c, sigma, mu_s, k_s
       real*8, dimension(Nz,Nr)    :: wt, Lt, sf
-      real*8, dimension(2:Nr-1)   :: DsigmaDr
+      real*8  :: DsigmaDr, DmuDr, DmukDr, DsfDz, D2sfDrDz, D3sfDr2Dz
+
       !The stream function is zero at the boundaries there is no need to update
       !since we only updated the interior
 
@@ -375,9 +376,20 @@ module tools_FD_cyl
                   +(mu_s(i+1)-mu_s(i-1))*(Lt(Nz,i+1)-Lt(Nz,i-1))/(4d0*dr)&
                   -(Lt(Nz-2,i)-4d0*Lt(Nz-1,i))*dr/(2d0*dz))/den
         !-- Condition for azimuthal vorticity --!
-        DsigmaDr(i) = (sigma(i+1)-sigma(i-1))/(2d0*dr)
+        DsigmaDr  = (sigma(i+1)-sigma(i-1))/(2d0*dr)
+        DmuDr     = (mu_s(i+1)-mu_s(i-1))/(2d0*dr)
+        DmukDr    = (mu_s(i+1)+k_s(i+1)-mu_s(i-1)-k_s(i-1))/(2d0*dr)
+        DsfDz     = (sf(Nz-2,i)-4d0*sf(Nz-1,i))/(2d0*dz)
+        D2sfDrDz  = (sf(Nz-2,i+1)-4d0*sf(Nz-1,i+1) &
+                    -sf(Nz-2,i-1)+4d0*sf(Nz-1,i-1))/(4d0*dr*dr)
+        D3sfDr2Dz = (sf(Nz-2,i+1)-4d0*sf(Nz-1,i+1) &
+                -2d0*sf(Nz-2,i)  +8d0*sf(Nz-1,i  ) &
+                    +sf(Nz-2,i-1)-4d0*sf(Nz-1,i-1))/(2d0*dr**2d0*dr)
+        wt(Nz,i)  = DsigmaDr/Ca &
+                   +(mu_s(i)+k_s(i))*(D2sfDrDz/(r(i)**2d0)-D3sfDr2Dz/r(i)) &
+                   -D2sfDrDz*DmukDr/r(i) + 2d0*DsfDz*DmuDr/(r(i)**2d0)
+
       end do
-      wt(Nz,2:Nr-1) = DsigmaDr(2:Nr-1)/Ca
     end subroutine BC_freeSurfTop
 
     subroutine stateEq_surfTension(sigma, c, Nr, option)
