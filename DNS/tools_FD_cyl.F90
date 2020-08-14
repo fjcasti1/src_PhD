@@ -352,15 +352,21 @@ module tools_FD_cyl
 
     !--- Left Boundary, symmetry axis ---!
       Lt(:,1)  = 0d0
-      wt(:,1)  = 0d0  ! CHECK HERE, POSSIBLE BUG?
+      wt(:,1)  = 0d0
 
     !--- Right Boundary, side wall (no-slip) ---!
       Lt(:,Nr) = 0d0
       wt(:,Nr) = (0.5d0*sf(:,Nr-2)-4d0*sf(:,Nr-1))/(r(Nr)*dr**2d0)
+      ! NOTE: Second order approximation of D2sfDr2 only with the assumption
+      ! that stream function, sf, and its first radial derivative, DsfDr, are
+      ! zero. This is true given no-slip boundary conditions
 
     !--- Bottom Boundary, rotating no-slip ---!
       Lt(1,2:Nr-1) = (1+Ro*dsin(wf*time))*r(2:Nr-1)**2d0
       wt(1,2:Nr-1) = (0.5d0*sf(3,2:Nr-1)-4d0*sf(2,2:Nr-1))/(r(2:Nr-1)*dz**2d0)
+      ! NOTE: Second order approximation of D2sfDz2 only with the assumption
+      ! that stream function, sf, and its first axial derivative, DsfDz, are
+      ! zero. This is true given no-slip boundary conditions
 
     !--- Top Boundary, Contaminated Free Surface ---!
       call stateEq_surfTension(sigma, c, Nr,'tanh')
@@ -371,11 +377,13 @@ module tools_FD_cyl
         !-- Condition for angular momentum --!
         ! Denominator first
         den = 3d0*dr/(2d0*dz)+2d0*mu_s(i)/dr+(mu_s(i+1)-mu_s(i-1))/r(i)
+        ! Angular momentum
         Lt(Nz,i) = (mu_s(i)*(Lt(Nz,i+1)+Lt(Nz,i-1))/dr &
                   -mu_s(i)*(Lt(Nz,i+1)-Lt(Nz,i-1))/(2d0*r(i)) &
                   +(mu_s(i+1)-mu_s(i-1))*(Lt(Nz,i+1)-Lt(Nz,i-1))/(4d0*dr)&
                   -(Lt(Nz-2,i)-4d0*Lt(Nz-1,i))*dr/(2d0*dz))/den
         !-- Condition for azimuthal vorticity --!
+        ! Derivatives needed
         DsigmaDr  = (sigma(i+1)-sigma(i-1))/(2d0*dr)
         DmuDr     = (mu_s(i+1)-mu_s(i-1))/(2d0*dr)
         DmukDr    = (mu_s(i+1)+k_s(i+1)-mu_s(i-1)-k_s(i-1))/(2d0*dr)
@@ -385,6 +393,7 @@ module tools_FD_cyl
         D3sfDr2Dz = (sf(Nz-2,i+1)-4d0*sf(Nz-1,i+1) &
                 -2d0*sf(Nz-2,i)  +8d0*sf(Nz-1,i  ) &
                     +sf(Nz-2,i-1)-4d0*sf(Nz-1,i-1))/(2d0*dr**2d0*dr)
+        ! Azimuthal vorticity
         wt(Nz,i)  = DsigmaDr/Ca &
                    +(mu_s(i)+k_s(i))*(D2sfDrDz/(r(i)**2d0)-D3sfDr2Dz/r(i)) &
                    -D2sfDrDz*DmukDr/r(i) + 2d0*DsfDz*DmuDr/(r(i)**2d0)
