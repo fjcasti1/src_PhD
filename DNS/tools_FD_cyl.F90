@@ -373,6 +373,17 @@ module tools_FD_cyl
       call stateEq_surfShearVisc(mu_s, c, Nr)
 !      call stateEq_surfDilatVisc(k_s, mu_s, Nr)
       k_s = 10d0*mu_s
+!! ----- Sanity check 1
+!      sigma = 0d0
+!      mu_s  = 0d0
+!      k_s   = 0d0
+!! ----- Sanity check 2
+!      mu_s  = 0d0
+!      k_s   = 0d0
+! ----- Sanity check 3
+!     k_s   = 0d0
+!! ----- Sanity check 4
+!
       do i=2,Nr-1
         !-- Condition for angular momentum --!
         ! Denominator first
