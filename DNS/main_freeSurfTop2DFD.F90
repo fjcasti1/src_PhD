@@ -1,12 +1,12 @@
-program main_kedgeTop2DFD
+program main_freeSurfaceTop
   use tools_FD_cyl
   implicit none
   logical  :: existe, regOpt
-  integer  :: Nz, Nz1, Nr, Nr1, ned, ned1, Nsteps, nsaves
+  integer  :: Nz, Nz1, Nr, Nr1, Nsteps, nsaves
   integer  :: i, j, m, ix, irestart
   integer  :: igraph, itseries, ibegin, init_file, info
-  real*8   :: Ca, Ca1, Re, Re1, Pe, Pe1, Ro, Ro1, f, f1, wf, wf1, simTU, NT, NtsT, T
-  real*8   :: ALT, RAD, Gama, eta, Gama1, eta1, dr, dr1, dz, dz1
+  real*8   :: Ca, Ca1, Re, Re1, Pe, Pe1, Ro, Ro1, wf, wf1, simTU, NT, NtsT, T
+  real*8   :: ALT, RAD, Gama, Gama1, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1
   real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
   integer, dimension(:),   allocatable :: ipiv
@@ -17,7 +17,7 @@ program main_kedgeTop2DFD
   real*8,  dimension(:,:), allocatable :: wt_rhs, Lt_rhs, DsfDz, DsfDr, DLtDz, DLtDr, ekk, egg, exx
   real*8,  dimension(:,:), allocatable :: L, D, B, P, Paux, Pinv, dumeig
   character*128 :: prefix, restart, tfile
-  character*128 :: vfile ! Erase  this line
+!  character*128 :: vfile ! Write surface velocity
   real*8, parameter :: PI = 4.d0*atan(1.0d0)
 
 ! Read parameters
@@ -25,15 +25,14 @@ program main_kedgeTop2DFD
   ix=index(prefix//' ',' ')-1
   read*, restart   ! name of restart file
   irestart=index(restart//' ',' ')-1
-  read*, Pe
   read*, Re
+  read*, Pe
+  read*, Ca
   read*, Ro
   read*, wf
   read*, Gama
-  read*, eta
   read*, Nr
   read*, Nz
-  read*, ned
   read*, dt         ! Default dt if wf = 0
   read*, NtsT       ! Number of Time Steps per Period
   read*, NT         ! Number of Periods or Number of Time Units (if wf=0)
@@ -45,11 +44,11 @@ program main_kedgeTop2DFD
 
 ! ===========
 ! = Scaling =
-! ==========
+! ===========
 ! ALT = H/Lc
 ! RAD = R/Lc
 ! Characteristic Length: Lc = R
-! Gamma = H/R, eta  = a/R
+! Gamma = H/R
 
   ALT = Gama
   RAD = 1d0
@@ -77,19 +76,12 @@ program main_kedgeTop2DFD
   print *, 'restart:      ', restart
   print *, 'Re:           ', Re
   print *, 'Pe:           ', Pe
-  if (Ro.eq.0d0.AND.wf.gt.0d0) then ! Unforced system, given response frequency
-    print *, 'wf:           ', 0
-  endif
-  print *, 'wf:           ', wf
+  print *, 'Ca:           ', Ca
   print *, 'Ro:           ', Ro
+  print *, 'wf:           ', wf
   print *, 'Gamma:        ', Gama
-  print *, 'eta:          ', eta
   print *, 'Nr:           ', Nr
   print *, 'Nz:           ', Nz
-  print *, 'ned:          ', ned
-!  if (Ro.eq.0) then
-!    print *, 'dt:           ', dt
-!  endif
   print *, 'NtsT:         ', NtsT
   print *, 'NT:           ', NT
   print *, 'nsaves:       ', nsaves
@@ -132,16 +124,17 @@ program main_kedgeTop2DFD
   else
     open(unit=15,file=tfile(1:3+ix),status='old', access='append')
   end if
-  ! -----  ERASE THIS SECTION ---- !
-  vfile(1:3)='vs_'
-  vfile(4:3+ix)=prefix(1:ix)
-  inquire(file=vfile(1:3+ix),exist=existe)
-  if (.not.existe) then
-    open(unit=25,file=vfile(1:3+ix),status='new',form='formatted')
-  else
-    open(unit=25,file=vfile(1:3+ix),status='old', access='append')
-  end if
-  ! -----  ERASE THIS SECTION ---- !
+!  Save surface velocity
+!  ! -----  ERASE THIS SECTION ---- !
+!  vfile(1:3)='vs_'
+!  vfile(4:3+ix)=prefix(1:ix)
+!  inquire(file=vfile(1:3+ix),exist=existe)
+!  if (.not.existe) then
+!    open(unit=25,file=vfile(1:3+ix),status='new',form='formatted')
+!  else
+!    open(unit=25,file=vfile(1:3+ix),status='old', access='append')
+!  end if
+!  ! -----  ERASE THIS SECTION ---- !
 
   oldtime=0d0
   if(ibegin.eq.0) then
@@ -153,8 +146,8 @@ program main_kedgeTop2DFD
     print*,'Reading from restart file'
     open(unit=1,file=restart(1:irestart),status='old',&
         form='unformatted')
-    read(1) Nz1,Nr1,ned1,dz1,dr1,dt1,oldtime
-    read(1) Re1,Pe1,Ro1,f1,wf1,Gama1,eta1
+    read(1) Nz1,Nr1,dz1,dr1,dt1,oldtime
+    read(1) Re1,Pe1,Ca1,Ro1,wf1,Gama1
     read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
             ((wt(j,i),j=1,Nz),i=1,Nr),&
             ((Lt(j,i),j=1,Nz),i=1,Nr)
@@ -164,7 +157,8 @@ program main_kedgeTop2DFD
 
 ! Format for writing time-series
   100 format (ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3,2x,ES23.15e3)
-  109 format (I4,2x,ES23.15e3,2x,ES23.15e3) ! ERASE THIS LINE
+! Format for writing surface velocity
+!  109 format (I4,2x,ES23.15e3,2x,ES23.15e3)
 
 ! Define first and second derivative operator (together), B, for r direction
 ! of the stream function PDE.
@@ -229,8 +223,8 @@ program main_kedgeTop2DFD
     call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs(wt,Lt,sf,Re,Pe,Ro,f,wf,Gama,eta,Nz,Nr,ned,dz,dr,&
-                                                   dt,time,prefix,ix,init_file)
+      call graphs_freeSurfTop(wt,Lt,sf,Re,Pe,Ca,Ro,wf,Gama,Nz,Nr,&
+                          dz, dr, dt, time, prefix, ix, init_file)
     end if
     if (mod(m,itseries).eq.0) then
       write(15,100) time, Ek, Eg, Ex, ulr, ulv, ulz
@@ -287,4 +281,4 @@ program main_kedgeTop2DFD
       exx = 0d0
     end subroutine initialize
 
-end program main_kedgeTop2DFD
+end program main_freeSurfaceTop

@@ -506,7 +506,7 @@ module tools_FD_cyl
 
     end subroutine observables
 
-    subroutine graphs(wt, Lt, sf, Re, Bo, Ro, f, wf, Gama, eta, Nz, Nr,&
+    subroutine graphs_kedgeTop(wt, Lt, sf, Re, Bo, Ro, f, wf, Gama, eta, Nz, Nr,&
                           ned, dz, dr, dt, time, prefix, ix, init_file)
       implicit none
       integer :: Nz, Nr, ned
@@ -525,6 +525,27 @@ module tools_FD_cyl
                 ((wt(j,i),j=1,Nz),i=1,Nr),&
                 ((Lt(j,i),j=1,Nz),i=1,Nr)
       close(10)
-    end subroutine graphs
+    end subroutine graphs_kedgeTop
+
+    subroutine graphs_freeSurfTop(wt, Lt, sf, Re, Pe, Ca, Ro, wf, Gama, Nz, Nr,&
+                          dz, dr, dt, time, prefix, ix, init_file)
+      implicit none
+      integer :: Nz, Nr
+      integer :: i, j, init_file, ix
+      real*8  :: Re, Pe, Ca, Ro, wf, Gama, dr, dz, dt, time
+      real*8, dimension(Nz,Nr) :: wt, Lt, sf
+      character*128 file_out, prefix
+      file_out(1:ix)=prefix(1:ix)
+      file_out(ix+1:ix+1)='_'
+      write(file_out(ix+2:ix+5),'(i4.4)') init_file
+      init_file=init_file+1
+      open(unit=10,file=file_out(1:ix+5),form='unformatted')
+      write(10) Nz,Nr,dz,dr,dt,time
+      write(10) Re,Pe,Ca,Ro,wf,Gama
+      write(10) ((sf(j,i),j=1,Nz),i=1,Nr),&
+                ((wt(j,i),j=1,Nz),i=1,Nr),&
+                ((Lt(j,i),j=1,Nz),i=1,Nr)
+      close(10)
+    end subroutine graphs_freeSurfTop
 
 end module tools_FD_cyl

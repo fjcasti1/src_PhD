@@ -50,12 +50,12 @@ input_gen() {
   out_rec="${9:?input_gen: OUT_REC NOT PASSED}"
   M="${10:-201}"
   N="${11:-201}"
-  Bo=$(python -c "print('$prefix'.split('Bo')[-1].split('_')[0])")
   Re=$(python -c "print('$prefix'.split('Re')[-1].split('_')[0])")
+  Pe=$(python -c "print('$prefix'.split('Pe')[-1].split('_')[0])")
+  Ca=$(python -c "print('$prefix'.split('Ca')[-1].split('_')[0])")
   Ro=$(python -c "print('$prefix'.split('Ro')[-1].split('_')[0])")
   wf=$(python -c "print('$prefix'.split('wf')[-1].split('_')[0])")
   gamma=$(python -c "print('$prefix'.split('Gamma')[-1].split('_')[0])")
-  eta=$(python -c "print('$prefix'.split('eta')[-1].split('_')[0])")
 
 #  npasos=$(python -c "print(int($TU/$dt))")
 #  igraph=$(python -c "print(int($npasos//10))")
@@ -66,15 +66,14 @@ input_gen() {
   cat << EOF
 '$prefix'        : prefix for filenames
 '$restart'       : name of restart file
-${Bo/e/d}        : Bo
 ${Re/e/d}        : Re=Omega a^2/nu
+${Pe/e/d}        : Pe
+${Ca/e/d}        : Ca
 ${Ro/e/d}        : Ro
 ${wf/e/d}        : wf
 ${gamma/e/d}     : GAMMA       H/R = Height/Radius (aspect ratio)
-${eta/e/d}       : eta         a/R = Knife Distance/Radius
 ${M}             : Nr  = number of horizontal points
 ${N}             : Nz  = number of vertical points
-1                : ned = number of knife edge points
 ${dt/e/d}        : dt
 ${NtsT/e/d}      : NtsT = Number of Time Steps per Period
 ${NT/e/d}        : NT   = Number of Periods
@@ -91,12 +90,12 @@ EOF
 my_job() {
   MODE="${1:?'MODE MISSING'}"
   sourceFile="${2:?'SOURCEFILE MISSING'}"
-  Bo="${3:?'BOUSSINESQ VAL MISSING'}"
   Re="${4:?'REYNOLDS VAL MISSING'}"
+  Pe="${3:?'PECLET VAL MISSING'}"
+  Ca="${3:?'CAPILARY VAL MISSING'}"
   Ro="${5:?'ROSSBY VAL MISSING'}"
   wf="${6:?'FORCING FREQ VAL MISSING'}"
   gamma="${7:?'GAMMA MISSING'}"
-  eta="${8:?'ETA MISSING'}"
   NtsT="${9:?'NtsT MISSING'}"
   NT="${10:?'NT MISSING'}"
   Nsaves="${11:?'N SAVES MISSING'}"
@@ -108,9 +107,7 @@ my_job() {
   M="${17:-201}"
   N="${18:-201}"
 
-#  prefix="Re${Re}_Bo${Bo}_Ro${Ro}_w${w}_TU${TU}"
-#  prefix="Re${Re}_Bo${Bo}_Ro${Ro}_wf${wf}_NtsT${NtsT}_NT${NT}"
-  prefix="Bo${Bo}_Re${Re}_Ro${Ro}_wf${wf}_Gamma${gamma}_eta${eta}_NtsT${NtsT}_NT${NT}"
+  prefix="Re${Re}_Pe${Pe}_Ca${Ca}_Ro${Ro}_wf${wf}_Gamma${gamma}_NtsT${NtsT}_NT${NT}"
   out_rec="${res_dir}sweep_${prefix}.out"
   ! [[ -d "$res_dir" ]] && mkdir -p "$res_dir" || :
 
