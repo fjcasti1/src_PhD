@@ -130,7 +130,7 @@ my_job() {
     printf "Plotting timeseries for ${prefix}\n"
     ts_rec="${res_dir}ts_${prefix}"
     pycmd=$HOME/.local/opt/anaconda/bin/python
-    $pycmd src/PostProcessing/monitor.py "${ts_rec}" "${res_dir}" "${dt}"
+    $pycmd src/PostProcessing/monitor_kedgeTop.py "${ts_rec}" "${res_dir}" "${dt}"
   fi
 }
 
@@ -180,8 +180,8 @@ EOF
 #    python << __EOF
 #import sys
 #sys.path.insert(0,'/scratch/fjcasti1/generalKnifeEdge/src/PostProcessing/')
-#import monitor
-#monitor.collectData('dat/','*.txt','collectiveData.dat')
+#import monitor_kedgeTop
+#monitor_kedgeTop.collectData('dat/','*.txt','collectiveData.dat')
 #__EOF
 #  fi
 #fi
