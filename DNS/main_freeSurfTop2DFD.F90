@@ -8,18 +8,18 @@ program main_freeSurfaceTop
   real*8   :: Ca, Ca1, Re, Re1, Pe, Pe1, Ro, Ro1, wf, wf1, simTU, NT, NtsT, T
   real*8   :: ALT, RAD, Gama, Gama1, dr, dr1, dz, dz1
   real*8   :: time, oldtime, dt, dt1
-  real*8   :: Ek, Eg, Ex, ulr, ulv, ulz
+  real*8   :: Ek, Eg, Ex, ulr, ulv, ulz, c0
   integer, dimension(:),   allocatable :: ipiv
   real*8,  dimension(:),   allocatable :: ldiag, mdiag, udiag
   real*8,  dimension(:),   allocatable :: eigRe, eigIm
-  real*8,  dimension(:),   allocatable :: r, c, c_tmp, c_rhs
+  real*8,  dimension(:),   allocatable :: r, c
   real*8,  dimension(:,:), allocatable :: wt, Lt, sf, wt_tmp, Lt_tmp
   real*8,  dimension(:,:), allocatable :: wt_rhs, Lt_rhs, DsfDz, DsfDr, DLtDz, DLtDr, ekk, egg, exx
   real*8,  dimension(:,:), allocatable :: L, D, B, P, Paux, Pinv, dumeig
   character*128 :: prefix, restart, tfile
 !  character*128 :: vfile ! Write surface velocity
   real*8, parameter :: PI = 4.d0*atan(1.0d0)
-
+  c0 = 0.2d0
 ! Read parameters
   read*, prefix    ! prefix for filenames
   ix=index(prefix//' ',' ')-1
@@ -89,6 +89,9 @@ program main_freeSurfaceTop
   print *, 'itseries:     ', itseries
   print *, 'init_file:    ', init_file
   print *, 'ibegin:       ', ibegin
+  if (ibegin.eq.0d0) then
+    print *, 'c0:       ', c0
+  endif
   print *, ' '
   print *, 'Calculated:   '
   print *, 'dr:           ', dr
@@ -142,6 +145,7 @@ program main_freeSurfaceTop
     wt=0d0
     Lt=0d0
     sf=0d0
+    c =c0
   else
     print*,'Reading from restart file'
     open(unit=1,file=restart(1:irestart),status='old',&
@@ -151,6 +155,7 @@ program main_freeSurfaceTop
     read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
             ((wt(j,i),j=1,Nz),i=1,Nr),&
             ((Lt(j,i),j=1,Nz),i=1,Nr)
+          ! NOTE: NEEDS TO READ CONCENTRATION TOO!
     close(1)
   end if
   if(ibegin.eq.2) oldtime=0d0
@@ -204,20 +209,31 @@ program main_freeSurfaceTop
     time=m*dt+oldtime
 
     !First RK2 step
+    print*, "CHECK A"
     call rhs_wtLt(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+    print*, "CHECK B"
     wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
     Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
+    print*, "CHECK C"
     call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-    call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr,c_tmp,c_rhs)
+    print*, "CHECK D"
+    call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr)
+    print*, "CHECK E"
     call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,c,Ca,wf,Ro,time,r,dr,dz,Nz,Nr)
+    print*, "CHECK F"
 
     !Second RK2 step
     call rhs_wtLt(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
+    print*, "CHECK G"
     wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
     Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
+    print*, "CHECK H"
     call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-    call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr,c_tmp,c_rhs)
+    print*, "CHECK I"
+    call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr)
+    print*, "CHECK J"
     call BC_freeSurfTop(wt,Lt,sf,c,Ca,wf,Ro,time,r,dr,dz,Nz,Nr)
+    print*, "CHECK K"
 ! ::::::::::::::::::::::::::::::
 
     call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
