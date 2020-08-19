@@ -6,6 +6,13 @@ partition="${4:?'PARTITION NOT SUPPLIED'}"
 MODE="${5:?'MODE NOT SUPPLIED'}"
 job_com="${6:-main}"
 
+if [ -x ${sourceFile} ]; then
+  echo "Running binary file ${sourceFile}"
+else
+  echo "ERROR 66 - INCORRECT BINARY FILE ${sourceFile}"
+  exit 66
+fi
+
 if [ $partition == "debug" ]; then
   echo "Partition = ${partition}. Needs -qos wildfire"
   qosLine="#SBATCH -q wildfire"
@@ -127,7 +134,7 @@ my_job() {
     printf "Plotting timeseries for ${prefix}\n"
     ts_rec="${res_dir}ts_${prefix}"
     pycmd=$HOME/.local/opt/anaconda/bin/python
-    $pycmd src/PostProcessing/monitor.py "${ts_rec}" "${res_dir}" "${dt}"
+    $pycmd src/PostProcessing/monitor_freeSurfTop.py "${ts_rec}" "${res_dir}" "${dt}"
   fi
 }
 
@@ -177,8 +184,8 @@ EOF
 #    python << __EOF
 #import sys
 #sys.path.insert(0,'/scratch/fjcasti1/generalKnifeEdge/src/PostProcessing/')
-#import monitor
-#monitor.collectData('dat/','*.txt','collectiveData.dat')
+#import monitor_freeSurfTop
+#monitor_freeSurfTop.collectData('dat/','*.txt','collectiveData.dat')
 #__EOF
 #  fi
 #fi

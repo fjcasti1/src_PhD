@@ -6,6 +6,13 @@ partition="${4:?'PARTITION NOT SUPPLIED'}"
 MODE="${5:?'MODE NOT SUPPLIED'}"
 job_com="${6:-main}"
 
+if [ -x ${sourceFile} ]; then
+  echo "Running binary file ${sourceFile}"
+else
+  echo "ERROR 66 - INCORRECT BINARY FILE ${sourceFile}"
+  exit 66
+fi
+
 if [ $partition == "debug" ]; then
   echo "Partition = ${partition}. Needs -qos wildfire"
   qosLine="#SBATCH -q wildfire"
