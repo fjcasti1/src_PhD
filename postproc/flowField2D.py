@@ -88,9 +88,6 @@ def main(f,problem,method,fields,clips,fb,gammaOpt,gma):
     bn = os.path.basename(f) # basename
     ext = os.path.splitext(f)[-1] # extension
 
-    print(problem)
-    print(method)
-
     if method.lower() == 'fd':
       if ext == '.vtk':
         print('\nFD codes do not work with vtk files')
@@ -99,7 +96,7 @@ def main(f,problem,method,fields,clips,fb,gammaOpt,gma):
         R,Z,d = read_kedgeTop_restart(f)
       elif problem.lower() == 'freesurftop':
         R,Z,d = read_freeSurfTop_restart(f)
-    if method.lower() == 'spectral':
+    elif method.lower() == 'spectral':
       if ext is not '.vtk':
         print('\nSpectral codes not work with vtk files')
         sys.exit(1)
