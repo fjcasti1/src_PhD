@@ -73,7 +73,7 @@ def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=1.0,Nell=33,Nred=3,gma=None):
   #    contour(X,Y,field,levels=[0],linestyles='-',colors='#777777')
   return None
 
-def main(f,fields,clips,fb,gammaOpt,gma):
+def main(f,problem,method,fields,clips,fb,gammaOpt,gma):
     '''
     Generates a figure of size (figBaseSize,Gamma*figBaseSize) with 1 axes
     The axes and the box around the figure are not visible
@@ -87,24 +87,61 @@ def main(f,fields,clips,fb,gammaOpt,gma):
 
     bn = os.path.basename(f) # basename
     ext = os.path.splitext(f)[-1] # extension
-    if ext == '.vtk':
-        tokens = ["Bo","Re","Ro","wf","Gamma","eta","mode","pert"]
-        R,Z,d = read_vtk(f)
-    elif ext == '':
-        tokens = ["Bo","Re","Ro","wf","Gamma","eta","NtsT","NT"]
-        R,Z,d = read_FD_restart(f)
 
-    # Obtain parameters from basename
-    params = {token:float(parse_token(bn,token)) for token in tokens}
+    print(problem)
+    print(method)
+
+    if method.lower() == 'fd':
+      if ext == '.vtk':
+        print('\nFD codes do not work with vtk files')
+        sys.exit(1)
+      elif problem.lower() == 'kedgetop':
+        R,Z,d = read_kedgeTop_restart(f)
+      elif problem.lower() == 'freesurftop':
+        R,Z,d = read_freeSurfTop_restart(f)
+    if method.lower() == 'spectral':
+      if ext is not '.vtk':
+        print('\nSpectral codes not work with vtk files')
+        sys.exit(1)
+      elif problem.lower() == 'kedgetop':
+        R,Z,d = read_vtk(f)
+      elif problem.lower() == 'freesurftop':
+        print('\nNot coded yet!')
+        sys.exit(1)
 
     for i in range(len(fields)):
-        if gammaOpt:
-            mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=params['Gamma'],gma=gma)
-        else:
-            mycf(R,Z,d[fields[i]],clips[i],fb=fb,gma=gma)
-        plt.savefig(outDir+fields[i]+'_'+bn.split('.')[0]+'.png')
-        plt.close()
+      if gammaOpt:
+        # Obtain parameters from basename
+        tokens = find_tokens(bn)
+        params = {token:float(parse_token(bn,token)) for token in tokens}
+        mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=params['Gamma'],gma=gma)
+      else:
+        mycf(R,Z,d[fields[i]],clips[i],fb=fb,gma=gma)
+      plt.savefig(outDir+fields[i]+'_'+bn.split('.')[0]+'.png')
+      plt.close()
     return None
+
+def check_input_args(probName, method, fields, clips):
+  allowedProblems = ['kedgetop','freesurftop']
+  allowedMethods  = ['fd','spectral']
+
+  if probName.lower() not in allowedProblems:
+    print('\nThe problem name is not correct.')
+    print('\nAvailable names: ', *allowedProblems,sep="\n -- ")
+    sys.exit(1)
+  elif method.lower() not in allowedMethods:
+    print('\nThe method is not correct.')
+    print('\nAvailable methods: ', *allowedMethods,sep="\n -- ")
+    sys.exit(1)
+  elif len(fields) is not len(clips):
+    print('\nThe lists Fields and Clips must have the same lenth.')
+    print('\nOne clipping value per field!')
+    sys.exit(1)
+  elif max(clips)>=1 or min(clips)<=0:
+    print('\nClips out of range.')
+    print('\nThe Clips must be in (0,1).')
+    sys.exit(1)
+  return None
 
 if __name__ == '__main__':
   DataFilePath, probName, method, fields, clips, \
@@ -112,11 +149,7 @@ if __name__ == '__main__':
 
 #  if create: os.system("./myParaview < pv_input &")
 
-    if len(fields) is not len(clips):
-        print('\nThe lists Fields and Clips must have the same lenth.')
-        print('\nOne clipping value per field!')
-        sys.exit(1)
-
+  check_input_args(probName, method, fields, clips)
 
   drecs = get_files_to_plot(DataFilePath)
 
@@ -124,8 +157,8 @@ if __name__ == '__main__':
   if NPROCS > 1:
     mkl_set_num_threads(NPROCS)
     pool = mp.Pool(processes=NPROCS)
-    D  = partial(main,fields=fields,clips=clips,
-            fb=figBaseSize,gammaOpt=gammaOpt,gma=gma)
+    D  = partial(main,problem=probName,method=method,fields=fields,
+                      clips=clips,fb=figBaseSize,gammaOpt=gammaOpt,gma=gma)
     DD = pool.map(D,drecs)
   else:
     for drec in drecs:
