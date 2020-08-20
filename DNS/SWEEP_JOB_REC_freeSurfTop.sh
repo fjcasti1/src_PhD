@@ -62,6 +62,7 @@ input_gen() {
   Ca=$(python -c "print('$prefix'.split('Ca')[-1].split('_')[0])")
   Ro=$(python -c "print('$prefix'.split('Ro')[-1].split('_')[0])")
   wf=$(python -c "print('$prefix'.split('wf')[-1].split('_')[0])")
+  c0=$(python -c "print('$prefix'.split('co')[-1].split('_')[0])")
   gamma=$(python -c "print('$prefix'.split('Gamma')[-1].split('_')[0])")
 
 #  npasos=$(python -c "print(int($TU/$dt))")
@@ -78,6 +79,7 @@ ${Pe/e/d}        : Pe
 ${Ca/e/d}        : Ca
 ${Ro/e/d}        : Ro
 ${wf/e/d}        : wf
+${c0/e/d}        : c0, initial concentration
 ${gamma/e/d}     : GAMMA       H/R = Height/Radius (aspect ratio)
 ${M}             : Nr  = number of horizontal points
 ${N}             : Nz  = number of vertical points
@@ -102,19 +104,20 @@ my_job() {
   Ca="${5:?'CAPILARY VAL MISSING'}"
   Ro="${6:?'ROSSBY VAL MISSING'}"
   wf="${7:?'FORCING FREQ VAL MISSING'}"
-  gamma="${8:?'GAMMA MISSING'}"
-  NtsT="${9:?'NtsT MISSING'}"
-  NT="${10:?'NT MISSING'}"
-  Nsaves="${11:?'N SAVES MISSING'}"
-  dt="${12:?'TIME-STEP VAL MISSING'}"
-  ibegin="${13:?'IBEGIN (STATE) MISSING'}"
-  regOpt="${14:?'REG OPT MISSING'}"
-  res_dir="${15:?'RESULT DIRECTORY MISSING'}"
-  restart="${16:-'NONE'}"
-  M="${17:-201}"
-  N="${18:-201}"
+  c0="${8:?'INITIAL CONCENTRATION MISSING'}"
+  gamma="${9:?'GAMMA MISSING'}"
+  NtsT="${10:?'NtsT MISSING'}"
+  NT="${11:?'NT MISSING'}"
+  Nsaves="${12:?'N SAVES MISSING'}"
+  dt="${13:?'TIME-STEP VAL MISSING'}"
+  ibegin="${14:?'IBEGIN (STATE) MISSING'}"
+  regOpt="${15:?'REG OPT MISSING'}"
+  res_dir="${16:?'RESULT DIRECTORY MISSING'}"
+  restart="${17:-'NONE'}"
+  M="${18:-201}"
+  N="${19:-201}"
 
-  prefix="Re${Re}_Pe${Pe}_Ca${Ca}_Ro${Ro}_wf${wf}_Gamma${gamma}_NtsT${NtsT}_NT${NT}"
+  prefix="Re${Re}_Pe${Pe}_Ca${Ca}_Ro${Ro}_wf${wf}_co${c0}_Gamma${gamma}_NtsT${NtsT}_NT${NT}"
   out_rec="${res_dir}sweep_${prefix}.out"
   ! [[ -d "$res_dir" ]] && mkdir -p "$res_dir" || :
 

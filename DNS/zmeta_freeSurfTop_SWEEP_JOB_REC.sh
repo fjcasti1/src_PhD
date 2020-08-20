@@ -20,14 +20,15 @@ gen_JR_line() {
   wN="${10}"
   wS="${11}"
   wE="${12}"
-  gamma="${13}"
-  NtsT="${14}"
-  NT="${15}"
-  Nsaves="${16}"
-  dt="${17}"
-  ibegin="${18}"
-  regOpt="${19}"
-  RS="${20}"
+  c0="${13}"
+  gamma="${14}"
+  NtsT="${15}"
+  NT="${16}"
+  Nsaves="${17}"
+  dt="${18}"
+  ibegin="${19}"
+  regOpt="${20}"
+  RS="${21}"
   rd=$(printf "results/runs_%s/" "$pn" )
   python << __EOF
 from numpy import pi
@@ -42,6 +43,7 @@ w0    =  $w0
 wN    =  $wN
 wS    =  $wS
 wE    = "$wE"
+c0    = "$c0"
 gamma = "$gamma"
 NtsT  = "$NtsT"
 NT    = "$NT"
@@ -70,16 +72,18 @@ for Reynolds in range(Re0,ReN+1,ReS):
     Frequency = w0
     Frequency = Frequency*float('1'+wE)
     wf = str(int(Frequency*1e18))+'e-18'
-    print(f'{Re:s} {Pe:s} {Ca:s} {Ro:s} {wf:s} {gamma:s} {NtsT:s} {NT:s} ' +
-                        f'{Nsaves:s} {dt:s} {ib:s} {regOpt:s} {rd:s} {RS:s}')
+    print(f'{Re:s} {Pe:s} {Ca:s} {Ro:s} {wf:s} {c0:s} {gamma:s} ' +
+          f'{NtsT:s} {NT:s} {Nsaves:s} {dt:s} {ib:s} {regOpt:s} ' +
+          f'{rd:s} {RS:s}')
   else:
     for Frequency in range(w0,wN+1,wS):
       if Frequency < 10:
         wf = f'0{Frequency:d}{wE:s}'
       else:
         wf = f'{Frequency:d}{wE:s}'
-      print(f'{Re:s} {Pe:s} {Ca:s} {Ro:s} {wf:s} {gamma:s} {NtsT:s} {NT:s} ' +
-                        f'{Nsaves:s} {dt:s} {ib:s} {regOpt:s} {rd:s} {RS:s}')
+      print(f'{Re:s} {Pe:s} {Ca:s} {Ro:s} {wf:s} {c0:s} {gamma:s} ' +
+            f'{NtsT:s} {NT:s} {Nsaves:s} {dt:s} {ib:s} {regOpt:s} ' +
+            f'{rd:s} {RS:s}')
 __EOF
 }
 
@@ -89,9 +93,9 @@ export -f gen_JR_line
                                               # Nsaves dt ibegin regOpt RS
 parallel --will-cite -j1 --col-sep='\s+' gen_JR_line :::: < <(
 cat << __EOF
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  025e-2  1200  1000  20 1e-3  0 True NONE
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  050e-2  1200  1000  20 1e-3  0 True NONE
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  075e-2  1200  1000  20 1e-3  0 True NONE
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  100e-2  1200  1000  20 1e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 025e-2  1200  1000  20 1e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 050e-2  1200  1000  20 1e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 075e-2  1200  1000  20 1e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 100e-2  1200  1000  20 1e-3  0 True NONE
 __EOF
 ) > $job_rec

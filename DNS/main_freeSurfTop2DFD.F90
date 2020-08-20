@@ -19,7 +19,6 @@ program main_freeSurfaceTop
   character*128 :: prefix, restart, tfile
 !  character*128 :: vfile ! Write surface velocity
   real*8, parameter :: PI = 4.d0*atan(1.0d0)
-  c0 = 0.2d0
 ! Read parameters
   read*, prefix    ! prefix for filenames
   ix=index(prefix//' ',' ')-1
@@ -30,6 +29,7 @@ program main_freeSurfaceTop
   read*, Ca
   read*, Ro
   read*, wf
+  read*, c0
   read*, Gama
   read*, Nr
   read*, Nz
@@ -79,6 +79,7 @@ program main_freeSurfaceTop
   print *, 'Ca:           ', Ca
   print *, 'Ro:           ', Ro
   print *, 'wf:           ', wf
+  print *, 'c0:           ', c0
   print *, 'Gamma:        ', Gama
   print *, 'Nr:           ', Nr
   print *, 'Nz:           ', Nz
@@ -89,9 +90,6 @@ program main_freeSurfaceTop
   print *, 'itseries:     ', itseries
   print *, 'init_file:    ', init_file
   print *, 'ibegin:       ', ibegin
-  if (ibegin.eq.0d0) then
-    print *, 'c0:       ', c0
-  endif
   print *, ' '
   print *, 'Calculated:   '
   print *, 'dr:           ', dr
