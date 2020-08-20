@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-pN=800
+pN=100
 job_dir="job_recs/patch_${pN}/"
 job_rec="${job_dir}ReSweep_JOB_REC_patch_${pN}_MASTER"
 
@@ -89,6 +89,9 @@ export -f gen_JR_line
                                               # Nsaves dt ibegin regOpt RS
 parallel --will-cite -j1 --col-sep='\s+' gen_JR_line :::: < <(
 cat << __EOF
-${pN}  1000  1000  1000 e0  0e-2 0e-2 0e-2  0 1 10 e-3  100e-2  120  100  20 5e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  025e-2  1200  1000  20 1e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  050e-2  1200  1000  20 1e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  075e-2  1200  1000  20 1e-3  0 True NONE
+${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  100e-2  1200  1000  20 1e-3  0 True NONE
 __EOF
 ) > $job_rec
