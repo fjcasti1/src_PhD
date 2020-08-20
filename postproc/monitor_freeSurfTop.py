@@ -1,142 +1,58 @@
 #!/usr/bin/env python
 import sys, os
 import numpy as np
-from scipy.signal import find_peaks
-from math import ceil
 from pylab import detrend,fft,savefig
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import axes3d
 from scipy.signal import blackman as blk
-from glob import glob
-import pandas as pd
+from mpl_toolkits.mplot3d import axes3d
+from myReader import find_tokens, parse_token
 
-
-def fig_dir(f):
-  #a = f.split('/')[0]
-  #return f'fig/{a:s}/'
+def fig_dir():
   return f'fig/'
 
-def long_basename(f):
-  return f.split('/')[-1]
+# time-series basename
+def ts_basename(name):
+  return os.path.splitext(name)[0]
 
-def ts_basename(f):
-  return f.split('_NtsT')[0]
+# fft basename
+def fft_basename(name):
+  return name.replace('ts_','fft_')
 
-def fft_basename(f):
-  return f.replace('ts_','fft_')
-
-def orbit_basename(f):
-  return f.replace('ts_','orbit_')
-
-def parse_token(bn,token):
-  return bn.split(token)[-1].split('_')[0]
-
-def pktopkAmp(S,M=0,F=0.9):
-  """
-    Help here
-  """
-  if M == 0:
-    M = len(S)
-  thresUp  = np.mean(S)+F*(np.max(S)-np.mean(S))
-  thresDwn = np.mean(S)-F*(np.mean(S)-np.min(S))
-  peaks, _   = find_peaks(S[-M:], height=thresUp)
-  valleys, _ = find_peaks(-S[-M:],height=-thresDwn)
-  pkpkAmp = np.mean(S[-M:][peaks]) - np.mean(S[-M:][valleys])
-  relErr = ((np.std(S[-M:][peaks])**2 + np.std(S[-M:][valleys])**2)**0.5)/pkpkAmp
-  return (pkpkAmp, relErr)
-
-def findIndex(df,Bo,Re,alpha,wf):
-  cond = ( (df['Re']==Re) & (df['Bo']==Bo) & (df['alpha']==alpha) &
-      (df['w_f']==wf) )
-  return df.index[cond].tolist()
-
-def addRow(df,runs,Bo,Re,alpha,wf,NtsT,NT,wFFT,AEk,AvgEk):
-  df = df.append({'runs_#':runs, 'Bo':Bo, 'Re':Re, 'alpha':alpha, 'w_f':wf,
-    'NtsT':NtsT, 'NT':NT, 'w*':wFFT, 'stdEk': AEk, 'AvgEk': AvgEk}, ignore_index=True)
-  return df
-
-def replaceRow(df,index,runs,Bo,Re,alpha,wf,NtsT,NT,wFFT,stdEk,AvgEk):
-  df.loc[index,['runs_#','Bo','Re','alpha','w_f','NtsT','NT','w*',
-    'stdEk','AvgEk']]=[runs,Bo,Re,alpha,wf,NtsT,NT,wFFT,stdEk,AvgEk]
-  return None
-
-def collectData(DAT_DIR,infiles,outfile):
-  df = pd.DataFrame(columns=['runs_#','Bo','Re','alpha','w_f','NtsT',
-    'NT','w*','stdEk','AvgEk'])
-  if os.path.exists(DAT_DIR+outfile):
-    df = pd.read_csv(DAT_DIR+outfile, sep=' ', dtype=object)
-  for infile in glob(DAT_DIR+infiles):
-    with open(infile,'r') as f:
-      f.readline()
-      try:
-        params = f.readline().strip('\n').split()
-        runs      = params[0]
-        Bo        = params[1]
-        Re        = params[2]
-        alpha     = params[3]
-        wf        = params[4]
-        NtsT      = params[5]
-        NT        = params[6]
-        wFFT      = params[7]
-        stdEk     = params[8]
-        AvgEk     = params[9]
-      except Exception as ex:
-        print('Exception reading line: ', ex)
-      filterIndex = findIndex(df,Bo,Re,alpha,wf)
-      if filterIndex and runs >= df.loc[filterIndex,'runs_#'].values:
-        replaceRow(df,filterIndex,runs,Bo,Re,alpha,wf,NtsT,NT,wFFT,stdEk,AvgEk)
-      elif not filterIndex:
-        df = addRow(df,runs,Bo,Re,alpha,wf,NtsT,NT,wFFT,stdEk,AvgEk)
-      f.close()
-    os.remove(infile)
-
-  with open(DAT_DIR+outfile,'w') as outfile:
-    df.to_csv(outfile,header=True,index=False,sep=' ')
-    outfile.close()
-  return None
+# orbit basename
+def orbit_basename(name):
+  return name.replace('ts_','orbit_')
 
 def main():
   f       = sys.argv[1]
-  res_dir = sys.argv[2]
-  dtinput = sys.argv[3]
+  dtinput = sys.argv[2]
 
-  FIG_DIR = fig_dir(res_dir)
+  FIG_DIR = fig_dir()
   DAT_DIR = f'dat/'
 
-  longbn  = long_basename(f)
-  tsbn    = ts_basename(longbn)
+  bn      = os.path.basename(f)
+  tsbn    = ts_basename(bn)
   fftbn   = fft_basename(tsbn)
   orbitbn = orbit_basename(tsbn)
-  tokens  = ['Re','Bo','alpha','wf','NtsT','NT']
+
+  tokens  = find_tokens(bn)  # Get list of tokens in basename
   try:
-    values = [ parse_token(longbn,token) for token in tokens ]
-    Re   = values[0]
-    Bo   = values[1]
-    alpha= values[2]
-    wf   = values[3]  # Forcing Angular Freq
-    NtsT = int(values[4])
-    NT   = int(values[5])
-    runs = f.split('runs_')[-1].split('/')[0]
+    params = {token: parse_token(bn,token) for token in tokens}
+    for key in params.keys():
+      exec(f"{key:s} = '{params[key]:s}'",globals())
   except Exception as ex:
     print('Exception in parse token: ', ex)
+
   if float(wf)>0:
     Period = 2*np.pi/float(wf)
     dt     = Period/NtsT
     Nsteps = float(NT*NtsT)
   else:
+    Period = 1
     print('wf not greater than 0. wf = ', wf) # COMPLETE THIS!
 
-#  if TU<0:
-#    Nsteps = -TU
-#    if wf!=0:
-#      dt     = float(1/(wf*Nsteps))
-#    elif wf==0:
-#      dt = float(dtinput)
-#  else:
-#    dt = float(dtinput)
-#    Nsteps = float(TU/dt)
+  dt = float(dtinput)
 
-  title_string = longbn.replace('_',' ')
+  title_string = bn.replace('_',' ')
   t,Ek,Eg,Ew,ur,uw,uz = np.loadtxt(f).T
   os.makedirs(FIG_DIR,exist_ok=True)
 
@@ -262,7 +178,7 @@ def main():
   labelsize = 18
   labelpadx = 3
   labelpady = 10
-  w = 1+float(alpha)*np.cos(float(wf)*t[-M:])
+  w = 1+float(Ro)*np.cos(float(wf)*t[-M:])
 
   fig, axes = plt.subplots(nrows=2,ncols=3,figsize=(14,9)) # Create canvas & axes
   ## Global Kinetic Energy Time Series
@@ -366,23 +282,8 @@ def main():
   savefig(f'{FIG_DIR:s}{orbitbn:s}.png')
   plt.close()
 
-
-##############
-# Write Data #
-##############
-  #(pkpkAmpEk, relErrEk) = pktopkAmp(Ek)
-  AvgEk = sum(Ek[-NtsT:])*dt/Period
-  dataFile = longbn+'.txt'
-  df = pd.DataFrame(columns=['runs_#','Bo','Re','alpha','w_f','NtsT','NT','w*','stdEk','AvgEk'])
-  df = addRow(df,runs,Bo,Re,alpha,wf,NtsT,NT,wFFT,AEk,AvgEk)
-
-  with open(os.path.join(DAT_DIR, dataFile),'w') as outfile:
-    df.to_csv(outfile,header=True,index=False,sep=' ')
-    outfile.close()
-
   return None
 
 
 if __name__ == '__main__':
   main()
-
