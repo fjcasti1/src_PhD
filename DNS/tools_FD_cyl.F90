@@ -566,6 +566,7 @@ module tools_FD_cyl
       integer :: Nz, Nr
       integer :: i, j, init_file, ix
       real*8  :: Re, Pe, Ca, Ro, wf, Gama, dr, dz, dt, time
+      real*8, dimension(Nr) :: c
       real*8, dimension(Nz,Nr) :: wt, Lt, sf
       character*128 file_out, prefix
       file_out(1:ix)=prefix(1:ix)
@@ -577,7 +578,8 @@ module tools_FD_cyl
       write(10) Re,Pe,Ca,Ro,wf,Gama
       write(10) ((sf(j,i),j=1,Nz),i=1,Nr),&
                 ((wt(j,i),j=1,Nz),i=1,Nr),&
-                ((Lt(j,i),j=1,Nz),i=1,Nr)
+                ((Lt(j,i),j=1,Nz),i=1,Nr),&
+                (c(i),i=1,Nr)
       close(10)
     end subroutine graphs_freeSurfTop
 

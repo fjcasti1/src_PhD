@@ -154,8 +154,8 @@ program main_freeSurfaceTop
     read(1) Re1,Pe1,Ca1,Ro1,wf1,Gama1
     read(1) ((sf(j,i),j=1,Nz),i=1,Nr),&
             ((wt(j,i),j=1,Nz),i=1,Nr),&
-            ((Lt(j,i),j=1,Nz),i=1,Nr)
-          ! NOTE: NEEDS TO READ CONCENTRATION TOO!
+            ((Lt(j,i),j=1,Nz),i=1,Nr),&
+            (c(i),i=1,Nr)
     close(1)
   end if
   if(ibegin.eq.2) oldtime=0d0
