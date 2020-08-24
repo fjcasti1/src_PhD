@@ -560,15 +560,18 @@ module tools_FD_cyl
       close(10)
     end subroutine graphs_kedgeTop
 
-    subroutine graphs_freeSurfTop(wt, Lt, sf, Re, Pe, Ca, Ro, wf, Gama, Nz, Nr,&
+    subroutine graphs_freeSurfTop(wt, Lt, sf, c, Re, Pe, Ca, Ro, wf, Gama, Nz, Nr,&
                           dz, dr, dt, time, prefix, ix, init_file)
       implicit none
-      integer :: Nz, Nr
-      integer :: i, j, init_file, ix
-      real*8  :: Re, Pe, Ca, Ro, wf, Gama, dr, dz, dt, time
-      real*8, dimension(Nr) :: c
-      real*8, dimension(Nz,Nr) :: wt, Lt, sf
+      integer, intent(inout) :: init_file
+      integer, intent(in) :: Nz, Nr, ix
+      real*8 , intent(in) :: dr, dz, dt, time
+      real*8 , intent(in) :: Re, Pe, Ca, Ro, wf, Gama
+      real*8 , intent(in), dimension(Nr) :: c
+      real*8 , intent(in), dimension(Nz,Nr) :: wt, Lt, sf
+      integer :: i, j
       character*128 file_out, prefix
+
       file_out(1:ix)=prefix(1:ix)
       file_out(ix+1:ix+1)='_'
       write(file_out(ix+2:ix+5),'(i4.4)') init_file
@@ -581,6 +584,11 @@ module tools_FD_cyl
                 ((Lt(j,i),j=1,Nz),i=1,Nr),&
                 (c(i),i=1,Nr)
       close(10)
+      print*, '--------in graphs----------'
+      do i=1,Nr
+        print*,'c(',i,') = ',c(i)
+      enddo
+      print*, '-------out graphs----------'
     end subroutine graphs_freeSurfTop
 
 end module tools_FD_cyl

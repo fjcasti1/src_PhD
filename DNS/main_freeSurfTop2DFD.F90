@@ -144,6 +144,9 @@ program main_freeSurfaceTop
     Lt=0d0
     sf=0d0
     c =c0
+    do i=1,Nr
+      print*,'c(',i,') = ',c(i)
+    enddo
   else
     print*,'Reading from restart file'
     open(unit=1,file=restart(1:irestart),status='old',&
@@ -155,6 +158,28 @@ program main_freeSurfaceTop
             ((Lt(j,i),j=1,Nz),i=1,Nr),&
             (c(i),i=1,Nr)
     close(1)
+    do i=1,Nr
+      print*,'c(',i,') = ',c(i)
+    enddo
+    print *, '======================================================='
+    print *, '=============== RESTART PARAMETERS READ ==============='
+    print *, '======================================================='
+    print *, 'restart:      ', restart(1:irestart)
+    print *, 'Nz1:          ', Nz1
+    print *, 'Nr1:          ', Nr1
+    print *, 'dz1:          ', dz1
+    print *, 'dr1:          ', dr1
+    print *, 'dt1:          ', dt1
+    print *, 'oldtime:      ', oldtime
+    print *, 'Re1:          ', Re1
+    print *, 'Pe1:          ', Pe1
+    print *, 'Ca1:          ', Ca1
+    print *, 'Ro1:          ', Ro1
+    print *, 'wf1:          ', wf1
+    print *, 'Gamma1:       ', Gama1
+    print *, '======================================================='
+    print *, '======================================================='
+    print *, ''
   end if
   if(ibegin.eq.2) oldtime=0d0
 
@@ -232,12 +257,15 @@ program main_freeSurfaceTop
     print*, "CHECK J"
     call BC_freeSurfTop(wt,Lt,sf,c,Ca,wf,Ro,time,r,dr,dz,Nz,Nr)
     print*, "CHECK K"
+    do i=1,Nr
+      print*,'c(',i,') = ',c(i)
+    enddo
 ! ::::::::::::::::::::::::::::::
 
     call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
     ! Outputs
     if (mod(m,igraph).eq.0) then
-      call graphs_freeSurfTop(wt,Lt,sf,Re,Pe,Ca,Ro,wf,Gama,Nz,Nr,&
+      call graphs_freeSurfTop(wt,Lt,sf,c,Re,Pe,Ca,Ro,wf,Gama,Nz,Nr,&
                           dz, dr, dt, time, prefix, ix, init_file)
     end if
     if (mod(m,itseries).eq.0) then
