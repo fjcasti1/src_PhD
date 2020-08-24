@@ -59,6 +59,10 @@ def get_files_to_plot(DataFilePath):
   drecs.sort()
   return drecs
 
+def mypl(x,y,style='-'):
+  plt.plot(x,y,style)
+  return None
+
 def mycf(X,Y,field,clip,fn=1,fb=4,fgamma=1.0,Nell=33,Nred=3,gma=None):
   if not gma: # Calculate abolute maximum if gma not specified
     gma = abs(field).max()
@@ -107,13 +111,16 @@ def main(f,problem,method,fields,clips,fb,gammaOpt,gma):
         sys.exit(1)
 
     for i in range(len(fields)):
-      if gammaOpt:
-        # Obtain parameters from basename
-        tokens = find_tokens(bn)
-        params = {token:float(parse_token(bn,token)) for token in tokens}
-        mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=params['Gamma'],gma=gma)
+      if fields[i] == 'c':
+        mypl(R[0][:],d[fields[i]])
       else:
-        mycf(R,Z,d[fields[i]],clips[i],fb=fb,gma=gma)
+        if gammaOpt:
+          # Obtain parameters from basename
+          tokens = find_tokens(bn)
+          params = {token:float(parse_token(bn,token)) for token in tokens}
+          mycf(R,Z,d[fields[i]],clips[i],fb=fb,fgamma=params['Gamma'],gma=gma)
+        else:
+          mycf(R,Z,d[fields[i]],clips[i],fb=fb,gma=gma)
       plt.savefig(outDir+fields[i]+'_'+bn.split('.')[0]+'.png')
       plt.close()
     return None
