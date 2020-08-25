@@ -76,7 +76,6 @@ module tools_FD_cyl
 !        c_rhs(j)  = D2cDr2/Pe              OK
 !        c_rhs(j)  = (DcDr/r(j))/Pe         OK
 !        c_rhs(j)  = (D2cDr2+DcDr/r(j))/Pe  OK
-!        c_rhs(j)  = 0d0
       end do
       print*, 'Dr_cDsfDz/r(j) = ', M1
       print*, 'DcDr/(r(j)*Pe) = ', M2
@@ -392,17 +391,17 @@ module tools_FD_cyl
       ! zero. This is true given no-slip boundary conditions
 
     !--- Top Boundary, Contaminated Free Surface ---!
-      call stateEq_surfTension(sigma, c, Nr,'tanh')
+      call stateEq_surfTension(sigma, c, Nr,'exp')
       call stateEq_surfShearVisc(mu_s, c, Nr)
 !      call stateEq_surfDilatVisc(k_s, mu_s, Nr)
       k_s = 10d0*mu_s
-! ----- Sanity check 1
-      sigma = 0d0
-      mu_s  = 0d0
-      k_s   = 0d0
-!! ----- Sanity check 2
+!! ----- Sanity check 0 & 1
+!      sigma = 0d0
 !      mu_s  = 0d0
 !      k_s   = 0d0
+! ----- Sanity check 2
+      mu_s  = 0d0
+      k_s   = 0d0
 ! ----- Sanity check 3
 !      k_s   = 0d0
 !! ----- Sanity check 4
