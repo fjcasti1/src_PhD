@@ -46,11 +46,7 @@ module tools_FD_cyl
       real*8,  intent(in)   , dimension(Nz,Nr) :: sf
       real*8,  intent(inout), dimension(Nr)    :: c_rhs
       real*8  :: Dr_cDsfDz, DcDr, D2cDr2
-      real*8  :: M1, M2, M3
       integer :: j
-      M1 = 0d0
-      M2 = 0d0
-      M3 = 0d0
       ! Although DsfDz was computed in other subroutines, it is done only for
       ! the interior. Here we need it for the surface. It will be done
       ! internally and not saved since we don't need it elsewhere
@@ -62,24 +58,8 @@ module tools_FD_cyl
       ! Second derivatives with respect to r
         D2cDr2    = (c(j-1)-2d0*c(j)+c(j+1))/(dr**2d0)
       ! Right hand side of the vorticity and angular momentum
-        if (abs(Dr_cDsfDz/r(j)) > M1) then
-          M1 = Dr_cDsfDz/r(j)
-        endif
-        if (abs((DcDr/r(j))/Pe)> M2) then
-          M2 = (DcDr/r(j))/Pe
-        endif
-        if (abs(D2cDr2/Pe)> M3) then
-          M3 = D2cDr2/Pe
-        endif
-        c_rhs(j)  = Dr_cDsfDz/r(j)+(D2cDr2+DcDr/r(j))/Pe ! OK?
-!        c_rhs(j)  = Dr_cDsfDz/r(j)       NOT OK
-!        c_rhs(j)  = D2cDr2/Pe              OK
-!        c_rhs(j)  = (DcDr/r(j))/Pe         OK
-!        c_rhs(j)  = (D2cDr2+DcDr/r(j))/Pe  OK
+        c_rhs(j)  = Dr_cDsfDz/r(j)+(D2cDr2+DcDr/r(j))/Pe
       end do
-      print*, 'Dr_cDsfDz/r(j) = ', M1
-      print*, 'DcDr/(r(j)*Pe) = ', M2
-      print*, 'D2cDr2/Pe      = ', M3
     end subroutine rhs_c
 
     subroutine solve_streamfn(wt, sf, r, dz, L, D, Nz, Nr, P, Pinv)
@@ -341,23 +321,17 @@ module tools_FD_cyl
       real*8,  intent(inout), dimension(Nr) :: c
       real*8 , dimension(Nr) :: c_tmp, c_rhs
     !-- Solves the concentration with a predictor-corrector method
-!      c_rhs = 0.001d0
       !First RK2 step
-      print*, "CHECK conc 1"
       call rhs_c(c,sf,Pe,r,dz,dr,Nz,Nr,c_rhs)
-      print*, "CHECK conc 2"
       c_tmp(2:Nr-1) = c(2:Nr-1) + dt*c_rhs(2:Nr-1)
       c_tmp(1)  = c_tmp(2)
       c_tmp(Nr) = c_tmp(Nr-1)
-      print*, "CHECK conc 3"
 
       !Second RK2 step
       call rhs_c(c_tmp,sf,Pe,r,dz,dr,Nz,Nr,c_rhs)
-      print*, "CHECK conc 4"
       c(2:Nr-1) = 0.5d0*(c(2:Nr-1) + c_tmp(2:Nr-1) + dt*c_rhs(2:Nr-1))
       c(1)  = c(2)
       c(Nr) = c(Nr-1)
-      print*, "CHECK conc 5"
     end subroutine solve_concentration
 
     subroutine BC_freeSurfTop(wt, Lt, sf, c, Ca, wf, Ro, time, r, dr, dz,&
@@ -395,17 +369,7 @@ module tools_FD_cyl
       call stateEq_surfShearVisc(mu_s, c, Nr)
 !      call stateEq_surfDilatVisc(k_s, mu_s, Nr)
       k_s = 10d0*mu_s
-!! ----- Sanity check 0 & 1
-!      sigma = 0d0
-!      mu_s  = 0d0
-!      k_s   = 0d0
-! ----- Sanity check 2
-!      mu_s  = 0d0
-!      k_s   = 0d0
-! ----- Sanity check 3
-!      k_s   = 0d0
-!! ----- Sanity check 4
-!
+
       do i=2,Nr-1
         !-- Condition for angular momentum --!
         ! Denominator first
@@ -583,11 +547,6 @@ module tools_FD_cyl
                 ((Lt(j,i),j=1,Nz),i=1,Nr),&
                 (c(i),i=1,Nr)
       close(10)
-      print*, '--------in graphs----------'
-      do i=1,Nr
-        print*,'c(',i,') = ',c(i)
-      enddo
-      print*, '-------out graphs----------'
     end subroutine graphs_freeSurfTop
 
 end module tools_FD_cyl
