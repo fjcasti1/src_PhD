@@ -144,9 +144,6 @@ program main_freeSurfaceTop
     Lt=0d0
     sf=0d0
     c =c0
-    do i=1,Nr
-      print*,'c(',i,') = ',c(i)
-    enddo
   else
     print*,'Reading from restart file'
     open(unit=1,file=restart(1:irestart),status='old',&
@@ -158,9 +155,6 @@ program main_freeSurfaceTop
             ((Lt(j,i),j=1,Nz),i=1,Nr),&
             (c(i),i=1,Nr)
     close(1)
-    do i=1,Nr
-      print*,'c(',i,') = ',c(i)
-    enddo
     print *, '======================================================='
     print *, '=============== RESTART PARAMETERS READ ==============='
     print *, '======================================================='
@@ -232,34 +226,20 @@ program main_freeSurfaceTop
     time=m*dt+oldtime
 
     !First RK2 step
-    print*, "CHECK A"
     call rhs_wtLt(wt,Lt,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
-    print*, "CHECK B"
     wt_tmp(2:Nz-1,2:Nr-1) = wt(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1)
     Lt_tmp(2:Nz-1,2:Nr-1) = Lt(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1)
-    print*, "CHECK C"
     call solve_streamfn(wt_tmp,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-    print*, "CHECK D"
     call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr)
-    print*, "CHECK E"
     call BC_freeSurfTop(wt_tmp,Lt_tmp,sf,c,Ca,wf,Ro,time,r,dr,dz,Nz,Nr)
-    print*, "CHECK F"
 
     !Second RK2 step
     call rhs_wtLt(wt_tmp,Lt_tmp,sf,Re,r,dr,dz,wt_rhs,Lt_rhs,Nz,Nr,DsfDz,DsfDr,DLtDz,DLtDr)
-    print*, "CHECK G"
     wt(2:Nz-1,2:Nr-1) = 0.5d0*(wt(2:Nz-1,2:Nr-1) + wt_tmp(2:Nz-1,2:Nr-1) + dt*wt_rhs(2:Nz-1,2:Nr-1))
     Lt(2:Nz-1,2:Nr-1) = 0.5d0*(Lt(2:Nz-1,2:Nr-1) + Lt_tmp(2:Nz-1,2:Nr-1) + dt*Lt_rhs(2:Nz-1,2:Nr-1))
-    print*, "CHECK H"
     call solve_streamfn(wt,sf,r,dz,L,D,Nz,Nr,P,Pinv)
-    print*, "CHECK I"
     call solve_concentration(c,sf,Pe,r,dz,dr,dt,Nz,Nr)
-    print*, "CHECK J"
     call BC_freeSurfTop(wt,Lt,sf,c,Ca,wf,Ro,time,r,dr,dz,Nz,Nr)
-    print*, "CHECK K"
-    do i=1,Nr
-      print*,'c(',i,') = ',c(i)
-    enddo
 ! ::::::::::::::::::::::::::::::
 
     call observables(Ek,Eg,Ex,ulr,ulv,ulz,ekk,egg,exx,sf,Lt,wt,r,DsfDr,DsfDz,DLtDr,DLtDz,Nz,Nr,dz,dr)
