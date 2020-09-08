@@ -33,7 +33,7 @@ C     z(i)=cos(pi*i/nz); zphys(i)=alt*(1+z(i))/2=gama*(1+z(i))/2
       real*8 nlvt(0:nr,0:nz,0:nn1,2),nlvz(0:nr,0:nz,0:nn1,2)
       real*8 rotvorz(0:nr,2,0:nn1,2),rotvorr(0:nz,0:nn1,2)
       real*8 dt,pnu,rad,alt
-      real*8 Bo,Re,Ro,wf,gama,eta
+      real*8 Re,Bo,Pe,Ca,Ro,wf,co,gama,eta
       real*8 pert,tps
       real*8 h(0:nr,0:nz,0:nn1),ccr(0:nx),ccz(0:nz),h2(0:nr,0:nn1)
       real*8 Ftr(0:nn1,10)  !up to ten values in phase
@@ -439,8 +439,8 @@ c      integer, parameter :: OUT_TSTXT_UNIT   = 2001
       real*8 , parameter :: pi = dacos(-1d0)
       real*8  r(0:nr),vr(0:nr,0:nz,0:nn-1,2)
       real*8  vt(0:nr,0:nz,0:nn-1,2), vz(0:nr,0:nz,0:nn-1,2)
-      real*8  dt ,tps ,Bo ,Re ,Ro ,wf ,gama ,eta ,pnu
-      real*8  dt1,tps1,Bo1,Re1,Ro1,wf1,gama1,eta1
+      real*8  dt ,tps ,Re ,Bo ,Pe ,Ca ,Ro ,wf ,co ,gama ,eta ,pnu
+      real*8  dt1,tps1,Re1,Bo1,Pe1,Ca1,Ro1,wf1,co1,gama1,eta1
       real*8  pert,tinicial,rad,alt,unifRand
       integer ix,irestart,nsteps,insec,init_file,iaxisym,ibegin,imode
       integer nrp(10),ntp(10),nzp(10),itseries,nr2,nz2,nn2,stage(2)
@@ -456,12 +456,14 @@ C <Read input parameters> ---------------------------------------------------
 C     Reading from standard input, e.g.: ./evolcrot.e < in_evolcrot &
       read*, prefix    ! Prefix for filenames
       read*, restart   ! Name of restart file
-      read*, Bo        ! Boussinesq
       read*, Re        ! Omega*R^2/nu
+      read*, Pe        ! Boussinesq
+      read*, Ca        ! Boussinesq
       read*, Ro        ! Omega/Omega
       read*, wf        ! Frequency of the sin(Wot) function
+      read*, co        ! Initial concentration
       read*, gama      ! H/R Aspect Ratio
-      read*, eta       ! a/R Knife Aspect Ratio
+      read*, dt      ! Number of timesteps per period (used to get dt)
       read*, NtsT      ! Number of timesteps per period (used to get dt)
       read*, NT        ! Number of periods
       read*, Nsaves    ! Write Nsaves solutions, used to calculate insec

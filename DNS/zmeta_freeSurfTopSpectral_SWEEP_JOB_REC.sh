@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-
-pN=100
+pN=000
 job_dir="job_recs/patch_${pN}/"
 job_rec="${job_dir}ReSweep_JOB_REC_patch_${pN}_MASTER"
 
 ! [[ -d "$job_dir" ]] && mkdir -p "$job_dir" || :
 gen_JR_line() {
-# pN   Re0 ReN ReS ReE  Pe  Ca  Ro   w0  wN wS wE  gamma  NtsT NT
-                                              # Nsaves dt ibegin regOpt RS
   pn="$1"
   Re0="$2"
   ReN="$3"
@@ -22,14 +19,18 @@ gen_JR_line() {
   wE="${12}"
   c0="${13}"
   gamma="${14}"
-  NtsT="${15}"
-  NT="${16}"
-  Nsaves="${17}"
-  dt="${18}"
-  ibegin="${19}"
-  regOpt="${20}"
-  RS="${21}"
-  rd=$(printf "results/runs_%s/" "$pn" )
+  dt="${15}"
+  NtsT="${16}"
+  NT="${17}"
+  Nsaves="${18}"
+  itseries="${18}"
+  init_file="${19}"
+  iaxisym="${20}"
+  ibegin="${21}"
+  imode="${22}"
+  pert="${23}"
+  RS="${24}"
+  res_dir=$(printf "results/runs_%s/" "$pn")
   python << __EOF
 from numpy import pi
 Re0   =  $Re0
@@ -45,14 +46,18 @@ wS    =  $wS
 wE    = "$wE"
 c0    = "$c0"
 gamma = "$gamma"
+dt    = "$dt"
 NtsT  = "$NtsT"
 NT    = "$NT"
 Nsaves= "$Nsaves"
-dt    = "$dt"
-ib    = "$ibegin"
-regOpt= "$regOpt"
-RS    = "$RS"
-rd    = "$rd"
+itseries = "$itseries"
+init_file = "$init_file"
+iaxisym = "$iaxisym"
+ibegin = "$ibegin"
+imode = "$imode"
+pert = "$pert"
+RS = "$RS"
+res_dir = "$res_dir"
 
 RS    = "" if RS == 'NONE' else RS
 
@@ -73,8 +78,8 @@ for Reynolds in range(Re0,ReN+1,ReS):
     Frequency = Frequency*float('1'+wE)
     wf = str(int(Frequency*1e18))+'e-18'
     print(f'{Re:s} {Pe:s} {Ca:s} {Ro:s} {wf:s} {c0:s} {gamma:s} ' +
-          f'{NtsT:s} {NT:s} {Nsaves:s} {dt:s} {ib:s} {regOpt:s} ' +
-          f'{rd:s} {RS:s}')
+          f'{dt:s} {NtsT:s} {NT:s} {Nsaves:s} {itseries:s} {init_file:s} ' +
+          f'{iaxisym:s} {ibegin:s} {imode:s} {pert:s} {res_dir:s} {RS:s}')
   else:
     for Frequency in range(w0,wN+1,wS):
       if Frequency < 10:
@@ -82,8 +87,8 @@ for Reynolds in range(Re0,ReN+1,ReS):
       else:
         wf = f'{Frequency:d}{wE:s}'
       print(f'{Re:s} {Pe:s} {Ca:s} {Ro:s} {wf:s} {c0:s} {gamma:s} ' +
-            f'{NtsT:s} {NT:s} {Nsaves:s} {dt:s} {ib:s} {regOpt:s} ' +
-            f'{rd:s} {RS:s}')
+            f'{dt:s} {NtsT:s} {NT:s} {Nsaves:s} {itseries:s} {init_file:s} ' +
+            f'{iaxisym:s} {ibegin:s} {imode:s} {pert:s} {res_dir:s} {RS:s}')
 __EOF
 }
 
@@ -93,9 +98,5 @@ export -f gen_JR_line
                                               # Nsaves dt ibegin regOpt RS
 parallel --will-cite -j1 --col-sep='\s+' gen_JR_line :::: < <(
 cat << __EOF
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 025e-2  1200  1000  20 5e-4  0 True NONE
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 050e-2  1200  1000  20 5e-4  0 True NONE
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 075e-2  1200  1000  20 5e-4  0 True NONE
-${pN}  1000  8000  1000 e0  1e5 1e-3 0e-2  0 1 10 e-3  2e-1 100e-2  1200  1000  20 5e-4  0 True NONE
 __EOF
 ) > $job_rec

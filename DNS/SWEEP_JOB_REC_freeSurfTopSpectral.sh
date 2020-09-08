@@ -51,12 +51,14 @@ input_gen() {
   NtsT="${3:?input_gen: NtsT NOT PASSED}"
   NT="${4:?input_gen: NT NOT PASSED}"
   Nsaves="${5:?input_gen: NSAVES NOT PASSED}"
-  dt="${6:?input_gen: TIME-STEP NOT PASSED}"
-  ibegin="${7:?input_gen: IBEGIN NOT PASSED}"
-  regOpt="${8:?input_gen: REGOPT NOT PASSED}"
-  out_rec="${9:?input_gen: OUT_REC NOT PASSED}"
-  M="${10:-201}"
-  N="${11:-201}"
+  itseries="${6:?input_gen: ITSERIES NOT PASSED}"
+  init_file="${7:?input_gen: INIT_FILE NOT PASSED}"
+  iaxisym="${8:?input_gen: IAXISYM NOT PASSED}"
+  ibegin="${9:?input_gen: IBEGIN NOT PASSED}"
+  imode="${10:?input_gen: IMODE NOT PASSED}"
+  pert="${11:?input_gen: PERT NOT PASSED}"
+  out_rec="${12:?input_gen: OUT_REC NOT PASSED}"
+  dt="${13:?input_gen: TIME-STEP NOT PASSED}"
   Re=$(python -c "print('$prefix'.split('Re')[-1].split('_')[0])")
   Pe=$(python -c "print('$prefix'.split('Pe')[-1].split('_')[0])")
   Ca=$(python -c "print('$prefix'.split('Ca')[-1].split('_')[0])")
@@ -64,36 +66,42 @@ input_gen() {
   wf=$(python -c "print('$prefix'.split('wf')[-1].split('_')[0])")
   c0=$(python -c "print('$prefix'.split('co')[-1].split('_')[0])")
   gamma=$(python -c "print('$prefix'.split('Gamma')[-1].split('_')[0])")
-
-#  npasos=$(python -c "print(int($TU/$dt))")
-#  igraph=$(python -c "print(int($npasos//10))")
   (( ibegin > 0 )) && [[ -z "$restart" ]] && {
     echo 'ERROR 100 -- IBEGIN > 0 but RESTART FILE MISSING'
     exit 100
   } || :
-  cat << EOF
-'$prefix'        : prefix for filenames
-'$restart'       : name of restart file
-${Re/e/d}        : Re=Omega a^2/nu
-${Pe/e/d}        : Pe
-${Ca/e/d}        : Ca
-${Ro/e/d}        : Ro
-${wf/e/d}        : wf
-${c0/e/d}        : c0, initial concentration
-${gamma/e/d}     : GAMMA       H/R = Height/Radius (aspect ratio)
-${M}             : Nr  = number of horizontal points
-${N}             : Nz  = number of vertical points
-${dt/e/d}        : dt
-${NtsT/e/d}      : NtsT = Number of Time Steps per Period
-${NT/e/d}        : NT   = Number of Periods
-${Nsaves}        : igraph - save solution every igraph timesteps
-${regOpt}        : Logical, True if regularization if top Analytical BC is deisred
-1                : itseries write to ts_file every itseries timesteps
-1                : init_file initial filenumber
-${ibegin}        : ibegin - 0 start from rest
-                          - 1 continue restart solution, keep t
-                          - 2 continue restart solution, set t=0
-EOF
+
+  cat >> $out_rec << __EOF
+'$prefix'     ! prefix for filenames
+'$restart'    ! name of restart file
+${Re/e/d}     ! REYNOLDS    Omega*R^2/nu
+${Pe/e/d}     ! PECLET      Omega*R^2/D_s
+${Ca/e/d}     ! CAPILLARY   mu*Omega*R/sigma_0
+${Ro/e/d}     ! ROSSBY      Amplitud/Omega
+${wf/e/d}     ! wf          Frequency of the sin(wf*t) function
+${c0/e/d}     ! c0          Initial concentration
+${gamma/e/d}  ! GAMMA       H/R = Height/Radius (aspect ratio)
+$dt           ! dt          time-step
+$NtsT         ! NtsT        Number of samples for each forcing period (used to get dt)
+$NT           ! NT          Number of time periods (or time-steps, if wf=0 or Ro=0)
+$Nsaves       ! Nsaves      Write Nsaves full solutions (used to calculate insec)
+$itseries     ! itseries    Write in time-series-files every itseries time-steps
+$init_file    ! init_file   Number of first output file
+$iaxisym      ! iaxisym = m:
+              !   m = 0 Axisymmetric Subspace
+              !   m = 1 Full 3D Solution
+              !   m > 1 m-Fourier subspace
+              !   m < 0 |m|-rotoreflection
+$ibegin       ! ibegin:
+              !  -1 Start from solid body rotation + pert, set t=0. NOT WORKING
+              !   0 Start from rest with random perturbation, set t=0.
+              !   1 Continue restart solution, keep t.
+              !   2 Continue restart solution, set t=0.
+              !   3 Continue restart sol. with random pert., set t=0.
+$imode        ! imode       Azimuthal mode to be perturbed
+${pert/e/d}   ! pert        Amplitude of the vz perturbation
+__EOF
+  cat $out_rec
 }
 
 my_job() {
@@ -106,26 +114,33 @@ my_job() {
   wf="${7:?'FORCING FREQ VAL MISSING'}"
   c0="${8:?'INITIAL CONCENTRATION MISSING'}"
   gamma="${9:?'GAMMA MISSING'}"
-  NtsT="${10:?'NtsT MISSING'}"
-  NT="${11:?'NT MISSING'}"
-  Nsaves="${12:?'N SAVES MISSING'}"
-  dt="${13:?'TIME-STEP VAL MISSING'}"
-  ibegin="${14:?'IBEGIN (STATE) MISSING'}"
-  regOpt="${15:?'REG OPT MISSING'}"
-  res_dir="${16:?'RESULT DIRECTORY MISSING'}"
-  restart="${17:-'NONE'}"
-  M="${18:-201}"
-  N="${19:-201}"
+  dt="${10:?'TIME-STEP VAL MISSING'}"
+  NtsT="${11:?'NtsT MISSING'}"
+  NT="${12:?'NT MISSING'}"
+  Nsaves="${13:?'NSAVES MISSING'}"
+  itseries="${14:?'ITSERIES MISSING'}"
+  init_file="${15:?'INIT_FILE MISSING'}"
+  iaxisym="${16:?'IAXISYM MISSING'}"
+  ibegin="${17:?'IBEGIN MISSING'}"
+  imode="${18:?'IMODE MISSING'}"
+  pert="${19:?'PERT MISSING'}"
+  res_dir="${20:?'RESULT DIRECTORY MISSING'}"
+  restart="${21:-'NONE'}"
 
-  prefix="Re${Re}_Pe${Pe}_Ca${Ca}_Ro${Ro}_wf${wf}_co${c0}_Gamma${gamma}_NtsT${NtsT}_NT${NT}"
+  if [ $pert == "0e-16" ]; then
+    prefix="Re${Re}_Pe${Pe}_Ca${Ca}_Ro${Ro}_wf${wf}_co${c0}_Gamma${gamma}_mode000_pert000"
+  else
+    prefix="Re${Re}_Pe${Pe}_Ca${Ca}_Ro${Ro}_wf${wf}_co${c0}_Gamma${gamma}_mode${imode}_pert${pert}"
+  fi
+  echo "$prefix"
   out_rec="${res_dir}sweep_${prefix}.out"
   ! [[ -d "$res_dir" ]] && mkdir -p "$res_dir" || :
 
   printf "Running binary file ${sourceFile}\n"
   if [ $MODE == "DNS" ] || [ $MODE == "MOVIEDNS" ] || [ $MODE == "ALL" ]; then
     printf "Computing solution for ${prefix}\n"
-    $sourceFile > $out_rec < <(
-      input_gen $prefix $restart $NtsT $NT $Nsaves $dt $ibegin $regOpt $out_rec $M $N)
+    $sourceFile >> $out_rec < <(input_gen $prefix $restart $NtsT $NT $Nsaves\
+      $itseries $init_file $iaxisym $ibegin $imode $pert $out_rec $dt)
 
     if [ $MODE != "MOVIEDNS" ]; then
       mv ${prefix}*${Nsaves} "$res_dir"
@@ -176,22 +191,5 @@ pcmd=$HOME/.local/bin/parallel
 \$pcmd -v -j $OVERHEAD_JOBS --col-sep='\s+' my_job $MODE $sourceFile :::: $job_rec
 echo "FINISHED JOB"
 EOF
-
-#if [ $MODE == "PLOT" ]; then
-#  if [[ $job_rec == *00 ]]; then
-#    while [[ $(squeue -u fjcasti1 | wc -l) -gt "2" ]]
-#    do
-#      sleep 5s
-#      echo "Sleeping" >> ${sbatch_rec}.out
-#    done
-#    python << __EOF
-#import sys
-#sys.path.insert(0,'/scratch/fjcasti1/generalKnifeEdge/src/PostProcessing/')
-#import monitor_freeSurfTop
-#monitor_freeSurfTop.collectData('dat/','*.txt','collectiveData.dat')
-#__EOF
-#  fi
-#fi
-#echo "FINISHED"
 
 
