@@ -141,8 +141,12 @@ c=======================================================================
       real*8 vz(0:nr,0:nz,0:nn-1)
       real*8 dz1(0:nz,0:nz)
       real*8 rad,alt,Re,Ro,wf,pnu
+      real*8 freg,eps
 
 c     r(i)=cos(pi*i/nx) in (0,1], radial collocation points
+
+c     Regularization factor freg with coefficient eps
+      eps = 5d-3
 
 c---- First, no-slip conditions in all boundaries, in all Fourier modes
       do k=0,nn-1
@@ -156,6 +160,11 @@ c---- First, no-slip conditions in all boundaries, in all Fourier modes
       enddo
 
 c---- Now, the non-zero boundary conditions
+      ! Bottom
+      do i=0,nr
+        freg = 1d0-dexp((r(i)**2d0-1)/eps)
+        vt(i,nz,0) = -(pnu*Re/rad)*(1d0+Ro*dsin(wf*time))*r(i)*freg
+      enddo
 
       return
       end subroutine bcvel
