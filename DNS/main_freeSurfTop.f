@@ -112,7 +112,7 @@ c     saving the solution
           open(unit=OUT_RESTART_UNIT,file=file_out(1:ix+5),
      &      form='unformatted')
           write(OUT_RESTART_UNIT) nr,nz,nn,dt,time,
-     &      stage(1),stage(2),Re,Ro,wf,gama
+     &      stage(1),stage(2),Re,Pe,Ca,Ro,wf,c0,gama
           write(OUT_RESTART_UNIT)
      &      ((((vr(i,j,k,n),i=0,nr),j=0,nz),k=0,nn-1),n=1,2)
           write(OUT_RESTART_UNIT)
@@ -383,7 +383,7 @@ c---- starting from a previous solution in restart
         open(IN_RESTART_UNIT,file=restart(1:irestart),
      &    form='unformatted')
         read(IN_RESTART_UNIT) nr2,nz2,nn2,dt1,time1,
-     &    stage(1),stage(2),Re1,Ro1,wf1,gama1
+     &    stage(1),stage(2),Re1,Pe1,Ca1,Ro1,wf1,c01,gama1
         if (nr2.ne.nr .or. nz2.ne.nz .or. nn2.ne.nn) then
           print*,'incorrect number of spectral modes in ',
      &         restart(1:irestart),' :'
