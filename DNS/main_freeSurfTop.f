@@ -11,10 +11,9 @@ c     nmax is needed in work arrays in spectral_tools.
       parameter(nr1=nr+1,nz1=nz+1,nrpz=nx+nz-2)
       real*8 dx1(0:nx,0:nx)  , dx2(0:nx,0:nx)
       real*8 dz1(0:nz,0:nz)  , dz2(0:nz,0:nz)
-      real*8 dr1(0:nr,0:nr,2), dr2(0:nr,0:nr,2),
-     & lap(0:nr,0:nr,2), MM(0:nr,0:nr,2), Mtilde(1:nr-1,1:nr-1,2)
+      real*8 dr1(0:nr,0:nr,2), dr2(0:nr,0:nr,2), lap(0:nr,0:nr,2)
+      real*8 dummyMM(0:nr,0:nr,2)
       real*8 x(0:nx),z(0:nz),r(0:nr),ri(0:nr),riq(0:nr)
-      integer i_eta
 C     x(i)=r(i)=cos(pi*i/nx) but with different dimensions.
 C     rphys(i)=rad*r(i)=r(i); ri(i)=1d0/r(i)
 C     z(i)=cos(pi*i/nz); zphys(i)=alt*(1+z(i))/2=gama*(1+z(i))/2
@@ -33,12 +32,12 @@ C     z(i)=cos(pi*i/nz); zphys(i)=alt*(1+z(i))/2=gama*(1+z(i))/2
       real*8 nlvt(0:nr,0:nz,0:nn1,2),nlvz(0:nr,0:nz,0:nn1,2)
       real*8 rotvorz(0:nr,2,0:nn1,2),rotvorr(0:nz,0:nn1,2)
       real*8 dt,pnu,rad,alt
-      real*8 Re,Bo,Pe,Ca,Ro,wf,co,gama,eta
-      real*8 pert,tps
+      real*8 Re,Pe,Ca,Ro,wf,c0,gama
+      real*8 pert,time
       real*8 h(0:nr,0:nz,0:nn1),ccr(0:nx),ccz(0:nz),h2(0:nr,0:nn1)
       real*8 Ftr(0:nn1,10)  !up to ten values in phase
       real*8 axx(0:nx,10),azz(0:nz,10)  !up to ten values in phase
-      real*8 wk(0:nr,0:nz,0:nn1,6),vs(0:nr)
+      real*8 wk(0:nr,0:nz,0:nn1,6)
       integer nsteps,itseries,insec
       integer stage(2),i,j,k,n,m,nrz,ibegin,ix,irestart,init_file
       integer nrpp(10),ntpp(10),nzpp(10),iaxisym,imode,npp
@@ -48,16 +47,14 @@ C     z(i)=cos(pi*i/nz); zphys(i)=alt*(1+z(i))/2=gama*(1+z(i))/2
       integer, parameter :: OUT_TS_UNIT      = 1001
 c      integer, parameter :: OUT_TSTXT_UNIT   = 2001
       real*8 , parameter :: pi = dacos(-1d0)
-      integer ipiv1(1:nr-1),ipiv2(1:nr-1)
-      integer info
 
 
       nrz=(nr+1)*(nz+1)
 
       call readinout(prefix,ix,restart,irestart,r,
-     &     Bo,Re,Ro,wf,gama,eta,pnu,nsteps,insec,
+     &     Re,Ro,wf,gama,pnu,nsteps,insec,
      &     init_file,iaxisym,ibegin,imode,pert,itseries,npp,nrpp,ntpp,
-     &     nzpp,rad,alt,vr,vt,vz,stage,tps,file_out,nr,nz,nn,NtsT,dt)
+     &     nzpp,rad,alt,vr,vt,vz,stage,time,file_out,nr,nz,nn,NtsT,dt)
       print*,' '
       print*,'--- Done readinout ---'
       print*,' '
@@ -65,40 +62,13 @@ c      integer, parameter :: OUT_TSTXT_UNIT   = 2001
 
 C <INITIALIZATION> ----------------------------------------------------------
       call grid(ccr,ccz,npp,nrpp,ntpp,nzpp,Ftr,axx,azz,nr,nz,nn)
-      call deriv(dx1,dz1,dx2,dz2,dr1,dr2,lap,MM,x,z,r,ri,riq,nr,nz)
+      call deriv(dx1,dz1,dx2,dz2,dr1,dr2,lap,dummyMM,x,z,r,ri,riq,nr,nz)
       call coef(dr1,dz1,cx01,cx03,cz01,cz02,cz03,cz11,cz12,cz13,nr,nz)
 c     wkdiag is a workspace, changed on exit; it is reset after call mdiag
       call mdiag(wkdiag,dz2,lap,riq,axd,vxd,bxd,azd,vzd,bzd,axn,
      &     vxn,bxn,azn,vzn,bzn,cx03,cz03,cz13,nr,nz,nn,nmax)
       call transform(tdr,tir,tdi,tii,nn)
 
-      if (Bo == 0d0) then ! Bo is infinite, marked as zero for convenience
-c       Calculate analytical surface azimuthal velocity, vs
-        call infBoussinesqBC(vs,eta,r,nr)
-      else
-C       Knife Edge placement in an specific node,
-C         find the closest node to r = eta
-        call KEplacement(i_eta,eta,r,nr)
-c       Reduce matrix MM for top boundary condition, because of known velocities
-        call ReduceBCMatrix(nr,i_eta,MM,Mtilde)
-c       Perform LU factorization of Mtilde. Mtilde replaced by LU. Need
-c       ipiv to solve the system with dgetrs
-        print *, 'LU Factorization of Mtilde'
-        call dgetrf(nr-1,nr-1,Mtilde(1,1,1),nr-1,ipiv1,info)
-        print *, 'info1 = ',info
-        if (info /= 0) then
-          print *, 'info1 = ',info
-          stop
-        endif
-        call dgetrf(nr-1,nr-1,Mtilde(1,1,2),nr-1,ipiv2,info)
-        print *, 'info2 = ',info
-        if (info /= 0) then
-          print *, 'info2 = ',info
-          stop
-        endif
-        print *, 'Done LU Factorization of Mtilde'
-
-      endif
 C---- Computing the nonlinear terms and pressure bc for the initial
 C     solution at N-1
       call tnlrot(stage(2),tdr,tir,tdi,tii,dr1,dz1,ri,vr,vt,vz,
@@ -109,18 +79,18 @@ C <MAIN LOOP> ----------------------------------------------------------
       do m=1,nsteps
 
 C     Advancing in time
-         tps=tps+dt
+         time=time+dt
 c     stage(1) is the solution at N, stage(2) at N-1
-         call time_stepper(Bo,Re,Ro,wf,dt,pnu,rad,alt,
-     &        stage,tps,tdr,tir,tdi,tii,wk,dz1,dz2,nr,nz,nn,
-     &        dr1,lap,MM,Mtilde,ipiv1,ipiv2,z,r,ri,
+         call time_stepper(Re,Ro,wf,dt,pnu,rad,alt,
+     &        stage,time,tdr,tir,tdi,tii,wk,dz1,dz2,nr,nz,nn,
+     &        dr1,lap,z,r,ri,
      &        axd,vxd,bxd,azd,vzd,bzd,axn,vxn,bxn,azn,vzn,bzn,
      &        cx01,cx03,cz01,cz02,cz03,cz11,cz12,cz13,
-     &        vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr,vs,i_eta)
+     &        vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr)
 c     stage(1) is the solution at N, stage(2) at N+1
          stage(1)=stage(2) ; stage(2)=3-stage(1)
 c     stage(1) is the solution at N+1, stage(2) at N
-         n=stage(1)   ! pointer to the just computed solution at tps
+         n=stage(1)   ! pointer to the just computed solution at time
 
 c     Enforce symmetry
          call enforce_symmetry(iaxisym,vr,vt,vz,nr,nz,nn)
@@ -130,7 +100,7 @@ c     write out time series
         if(mod(m,itseries).eq.0) then
 c           open(12,file='phasept.'//prefix(1:ix),status='old',
 c     &          access='append')
-           call tswrite(vr,vt,vz,tps,stage,npp,r,axx,azz,Ftr,ccr,
+           call tswrite(vr,vt,vz,time,stage,npp,r,axx,azz,Ftr,ccr,
      &                  ccz,h,h2,nr,nz,nn,nx,rad,pnu,Re)
 c           close(12)
         endif
@@ -141,8 +111,8 @@ c     saving the solution
           init_file=init_file+1
           open(unit=OUT_RESTART_UNIT,file=file_out(1:ix+5),
      &      form='unformatted')
-          write(OUT_RESTART_UNIT) nr,nz,nn,dt,tps,
-     &      stage(1),stage(2),Bo,Re,Ro,wf,gama,eta
+          write(OUT_RESTART_UNIT) nr,nz,nn,dt,time,
+     &      stage(1),stage(2),Re,Ro,wf,gama
           write(OUT_RESTART_UNIT)
      &      ((((vr(i,j,k,n),i=0,nr),j=0,nz),k=0,nn-1),n=1,2)
           write(OUT_RESTART_UNIT)
@@ -162,275 +132,38 @@ c      close(OUT_TSTXT_UNIT)
 
 c=======================================================================
 
-      subroutine bcvel(tps,r,vr,vt,vz,rad,alt,
-     &          nr,nz,nn,Bo,Re,Ro,wf,pnu,dz1,
-     &          MM,Mtilde,ipiv1,ipiv2,vs,i_eta)
+      subroutine bcvel(time,r,vr,vt,vz,rad,alt,
+     &          nr,nz,nn,Re,Ro,wf,pnu,dz1)
       implicit none
-      integer nr,nz,nn,i,j,k,info,i_eta
-      real*8 r(0:nr),tps
+      integer nr,nz,nn,i,j,k
+      real*8 r(0:nr),time
       real*8 vr(0:nr,0:nz,0:nn-1),vt(0:nr,0:nz,0:nn-1)
-      real*8 vz(0:nr,0:nz,0:nn-1),vs(0:nr)
+      real*8 vz(0:nr,0:nz,0:nn-1)
       real*8 dz1(0:nz,0:nz)
-      real*8 rad,alt,alpha,Bo,Re,Ro,wf,pnu
-      real*8 v_KE(0:nn-1) ! One for each mode
-      real*8 MM(0:nr,0:nr,2),f(0:nr,0:nz,0:nn-1)
-      real*8 Mtilde(1:nr-1,1:nr-1,2), ftilde(1:nr-1,0:nn-1)
-      integer ipiv1(1:nr-1),ipiv2(1:nr-1)
+      real*8 rad,alt,Re,Ro,wf,pnu
 
 c     r(i)=cos(pi*i/nx) in (0,1], radial collocation points
 
 c---- First, no-slip conditions in all boundaries, in all Fourier modes
       do k=0,nn-1
          do i=0,nr
-            vr(i,0,k)=0d0; vz(i,0,k)=0d0 ! Top
-c           vt(i,0,k) specified below
-            vr(i,nz,k)=0d0; vt(i,nz,k)=0d0; vz(i,nz,k)=0d0 !Bottom
+            vr(i, 0,k)=0d0; vt(i, 0,k)=0d0; vz(i, 0,k)=0d0 ! Top
+            vr(i,nz,k)=0d0; vt(i,nz,k)=0d0; vz(i,nz,k)=0d0 ! Bottom
          enddo
          do j=1,nz-1
             vr(0,j,k)=0d0; vt(0,j,k)=0d0; vz(0,j,k)=0d0 ! Sidewall
          enddo
       enddo
-!      do k=1,nn-1
-!         do i=0,nr
-!            vt(i,0,k)=0d0 ! Top, not the 0-mode
-!         enddo
-!      enddo
 
 c---- Now, the non-zero boundary conditions
-
-      if (Bo == 0d0) then ! Bo is infinite, marked as zero for convenience
-                 ! vs: Knife Edge Analytical Boundary Condition for Bo = 0
-        do i=0,nr
-          vt(i,0,0)=-(pnu*Re/rad)*vs(i)
-        enddo
-        do k=1,nn-1
-          do i=0,nr
-              vt(i,0,k)=0d0
-          enddo
-        enddo
-      else ! Solve stress balance boundary condition
-        ! Calculate (1/Bo)d(v_theta)/dz, stored in f(0:nr,0:nz,0:nn-1)
-        alpha=2d0/(Bo*alt) ! Includes scaling factor
-        do k=0,nn-1
-          call dgemm('N','T',nr+1,nz+1,nz+1,alpha,vt(0,0,k),nr+1,
-     &         dz1(0,0),nz+1,0.d0,f(0,0,k),nr+1)
-        enddo
-
-        ! Set up the KE azimuthal velocity for each mode
-        v_KE(0) = -(pnu*Re/rad)*r(i_eta)*(1+Ro*dsin(wf*tps))
-        do k=1,nn-1
-          v_KE(k) = 0d0
-        enddo
-        ! Set up the reduced RHS and solve the system for each mode.
-        ! Reassemble the vector at the end, for each mode.
-        ! Since v_theta is an odd function, we use odd derivatives for the
-        ! even modes, and viceversa. See below, when k is odd we use
-        ! even MM, and when k is even we use odd MM. Mode 0 is odd, mode 1
-        ! is even, mode 2 is odd ...
-        do k=0,(nn-2)/2
-          ! reduced RHS, even modes -> odd derivatives & viceversa
-          do i=1,i_eta-1
-            ftilde(i,2*k  )   = f(i,0,2*k  ) - MM(i,i_eta,1)*v_KE(2*k  )
-            ftilde(i,2*k+1)   = f(i,0,2*k+1) - MM(i,i_eta,2)*v_KE(2*k+1)
-          enddo
-          do i=i_eta+1,nr
-            ftilde(i-1,2*k  ) = f(i,0,2*k  ) - MM(i,i_eta,1)*v_KE(2*k  )
-            ftilde(i-1,2*k+1) = f(i,0,2*k+1) - MM(i,i_eta,2)*v_KE(2*k+1)
-          enddo
-          ! Solve
-          call dgetrs('N',nr-1,1,Mtilde(1,1,1),nr-1,ipiv1,
-     &     ftilde(1,2*k  ),nr-1,info)
-          if (info /= 0) then
-            print *, 'info1 = ',info
-            stop
-          endif
-          call dgetrs('N',nr-1,1,Mtilde(1,1,2),nr-1,ipiv2,
-     &     ftilde(1,2*k+1),nr-1,info)
-          if (info /= 0) then
-            print *, 'info2 = ',info
-            stop
-          endif
-          ! Reassemble
-          vt(0,0,2*k  ) = 0d0
-          vt(0,0,2*k+1) = 0d0
-          do i=1,i_eta-1
-            vt(i,0,2*k  ) = ftilde(i,2*k  )
-            vt(i,0,2*k+1) = ftilde(i,2*k+1)
-          enddo
-          vt(i_eta,0,2*k  ) = v_KE(2*k  )
-          vt(i_eta,0,2*k+1) = v_KE(2*k+1)
-          do i=i_eta+1,nr
-            vt(i,0,2*k  ) = ftilde(i-1,2*k  )
-            vt(i,0,2*k+1) = ftilde(i-1,2*k+1)
-          enddo
-        enddo
-      endif
 
       return
       end subroutine bcvel
 
-      subroutine KEplacement(i_eta,eta,r,nr)
-      implicit none
-      integer, intent(out) :: i_eta
-      integer,intent(in)  :: nr
-      real*8, intent(in)  :: r(0:nr), eta
-      integer :: i
-      real*8  :: d(0:nr)
-
-      do i=0,nr
-        d(i) = abs(eta-r(i))
-      enddo
-      i_eta = minloc(d,DIM=1)-1
-c                  -1 because the counter starts at 1, should start at 0
-
-      print *, '======================================================='
-      print *, '=============== PLACEMENT OF KNIFE EDGE ==============='
-      print *, '======================================================='
-      print *, '-----------------------------'
-      print *, '--- Theoretical eta value ---'
-      print *, '-----------------------------'
-      print *, 'eta:        ', eta
-      print *, '----------------------------'
-      print *, '------- Closest node -------'
-      print *, '----------------------------'
-      print *, 'i_eta:      ', i_eta
-      print *, 'eta_approx: ', r(i_eta)
-      return
-      end subroutine KEplacement
-
-      subroutine ReduceBCMatrix(nr,i_eta,MM,Mtilde)
-      implicit none
-      integer, intent(in)  :: i_eta,nr
-      real*8,  intent(in)  :: MM(0:nr,0:nr,2)
-      real*8,  intent(out) :: Mtilde(1:nr-1,1:nr-1,2)
-      integer :: i,j
-
-      do i=1,i_eta-1
-        do j=1,i_eta-1
-          Mtilde(i,j,1) = MM(i,j,1)
-          Mtilde(i,j,2) = MM(i,j,2)
-        enddo
-        do j=i_eta+1,nr
-          Mtilde(i,j-1,1) = MM(i,j,1)
-          Mtilde(i,j-1,2) = MM(i,j,2)
-        enddo
-      enddo
-      do i=i_eta+1,nr
-        do j=1,i_eta-1
-          Mtilde(i-1,j,1) = MM(i,j,1)
-          Mtilde(i-1,j,2) = MM(i,j,2)
-        enddo
-        do j=i_eta+1,nr
-          Mtilde(i-1,j-1,1) = MM(i,j,1)
-          Mtilde(i-1,j-1,2) = MM(i,j,2)
-        enddo
-      enddo
-      return
-      end subroutine ReduceBCMatrix
-
-      subroutine infBoussinesqBC(vs,eta,r,nr)
-      implicit none
-      integer :: i,Nsys
-      parameter (Nsys=3)
-      integer,intent(in)  :: nr
-      real*8, intent(in)  ::  r(0:nr), eta
-      real*8, intent(out) :: vs(0:nr)
-      real*8 :: a,b,c,d,eps,delta,AA,BB
-      !NOTE: eps, delta should be intent in as well
-      real*8 :: f(0:Nsys,1)
-      eps   = 2d-2
-      delta = 2d-2
-c     Calculate coefficients of cubic splie to regularize analytical
-c     solution
-      call regSystemMatrices(Nsys,eta,eps,delta,f)
-      a = f(0,1)
-      b = f(1,1)
-      c = f(2,1)
-      d = f(3,1)
-c     Calculate analytical solution for infinite Boussinesq
-      AA = eta**2d0/(eta**2d0-1d0)
-      BB = -AA
-      do i=0,nr
-        if (r(i) <= eta-eps) then
-          vs(i)=r(i)
-        elseif (r(i) > eta-eps .and. r(i) < eta+delta) then
-          vs(i)=a*r(i)**3d0+b*r(i)**2d0+c*r(i)+d
-        else
-          vs(i)=AA*r(i)+BB/r(i)
-        endif
-      enddo
-      print*, ''
-      print*, '======================================================='
-      print*, '=== REGULARIZATION OF ANALYTICAL BOUNDARY CONDITION ==='
-      print*, '======================================================='
-      print *, ' '
-      print *, '--------------------------'
-      print *, '---- ODE Coefficients ----'
-      print *, '--------------------------'
-      print *, ' '
-      print *, 'AA:        ', AA
-      print *, 'BB:        ', BB
-      print *, '--------------------------'
-      print *, '--- Cubic Coefficients ---'
-      print *, '--------------------------'
-      print *, ' '
-      print *, 'a:        ', a
-      print *, 'b:        ', b
-      print *, 'c:        ', c
-      print *, 'd:        ', d
-      print *, '--------------------------'
-      print *, '------ Side Spacing ------'
-      print *, '--------------------------'
-      print *, ' '
-      print *, 'epsilon:  ', eps
-      print *, 'delta:    ', delta
-      print *, 'eta:      ', eta
-      return
-      end subroutine infBoussinesqBC
-
-      subroutine regSystemMatrices(Nsys,eta,eps,delta,f)
-      implicit none
-      integer,intent(in)    :: Nsys
-      real*8, intent(in)    :: eta, eps, delta
-      real*8, intent(inout) :: f(0:Nsys,1)
-      real*8  :: M(0:Nsys,0:Nsys)
-      real*8  :: AA,BB
-      integer :: info, ipiv(Nsys+1)
-c      Define parameters and matrices
-      AA = eta**2d0/(eta**2d0-1d0)
-      BB = -AA
-
-      M(0,0) = (eta-eps)**3d0
-      M(0,1) = (eta-eps)**2d0
-      M(0,2) = (eta-eps)
-      M(0,3) = 1
-      M(1,0) = (eta+delta)**3d0
-      M(1,1) = (eta+delta)**2d0
-      M(1,2) = (eta+delta)
-      M(1,3) = 1
-      M(2,0) = 3d0*(eta-eps)**2d0
-      M(2,1) = 2d0*(eta-eps)
-      M(2,2) = 1
-      M(2,3) = 0
-      M(3,0) = 3d0*(eta+delta)**2d0
-      M(3,1) = 2d0*(eta+delta)
-      M(3,2) = 1
-      M(3,3) = 0
-
-      f(0,1) = eta-eps
-      f(1,1) = AA*(eta+delta)+BB/(eta+delta)
-      f(2,1) = 1
-      f(3,1) = AA-BB/((eta+delta)**2d0)
-c     Calculate coefficients of cubic spline to regularize analytical
-c     solution
-      call dgesv(Nsys+1,1,M,Nsys+1,ipiv,f,Nsys+1,info)
-      return
-      end subroutine regSystemMatrices
-
       subroutine readinout(prefix,ix,restart,irestart,r,
-     &     Bo,Re,Ro,wf,gama,eta,pnu,nsteps,insec,
+     &     Re,Ro,wf,gama,pnu,nsteps,insec,
      &     init_file,iaxisym,ibegin,imode,pert,itseries,npp,nrp,ntp,
-     &     nzp,rad,alt,vr,vt,vz,stage,tps,file_out,nr,nz,nn,NtsT,dt)
+     &     nzp,rad,alt,vr,vt,vz,stage,time,file_out,nr,nz,nn,NtsT,dt)
       implicit none
       integer :: nr,nz,nn,nx,nnh,nnhp,nn1
       integer, parameter :: IN_RESTART_UNIT  = 1000
@@ -439,8 +172,8 @@ c      integer, parameter :: OUT_TSTXT_UNIT   = 2001
       real*8 , parameter :: pi = dacos(-1d0)
       real*8  r(0:nr),vr(0:nr,0:nz,0:nn-1,2)
       real*8  vt(0:nr,0:nz,0:nn-1,2), vz(0:nr,0:nz,0:nn-1,2)
-      real*8  dt ,tps ,Re ,Bo ,Pe ,Ca ,Ro ,wf ,co ,gama ,eta ,pnu
-      real*8  dt1,tps1,Re1,Bo1,Pe1,Ca1,Ro1,wf1,co1,gama1,eta1
+      real*8  dt ,time ,Re ,Pe ,Ca ,Ro ,wf ,c0 ,gama ,pnu
+      real*8  dt1,time1,Re1,Pe1,Ca1,Ro1,wf1,c01,gama1
       real*8  pert,tinicial,rad,alt,unifRand
       integer ix,irestart,nsteps,insec,init_file,iaxisym,ibegin,imode
       integer nrp(10),ntp(10),nzp(10),itseries,nr2,nz2,nn2,stage(2)
@@ -457,11 +190,11 @@ C     Reading from standard input, e.g.: ./evolcrot.e < in_evolcrot &
       read*, prefix    ! Prefix for filenames
       read*, restart   ! Name of restart file
       read*, Re        ! Omega*R^2/nu
-      read*, Pe        ! Boussinesq
-      read*, Ca        ! Boussinesq
+      read*, Pe        ! Peclet
+      read*, Ca        ! Capillary
       read*, Ro        ! Omega/Omega
       read*, wf        ! Frequency of the sin(Wot) function
-      read*, co        ! Initial concentration
+      read*, c0        ! Initial concentration
       read*, gama      ! H/R Aspect Ratio
       read*, dt      ! Number of timesteps per period (used to get dt)
       read*, NtsT      ! Number of timesteps per period (used to get dt)
@@ -536,7 +269,6 @@ C <Print general case info> -------------------------------------------------
       print *, '-- Physical Parameters --'
       print *, '-------------------------'
       print *, ' '
-      print *, 'Bo:        ', Bo
       print *, 'Re:        ', Re
       print *, 'Ro:        ', Ro
       print *, 'wf:        ', wf
@@ -546,7 +278,6 @@ C <Print general case info> -------------------------------------------------
       print *, '-------------------------'
       print *, ' '
       print *, 'gama:      ', gama
-      print *, 'eta:       ', eta
       print *, 'nr:        ', nr
       print *, 'nz:        ', nz
       print *, 'nn:        ', nn
@@ -651,8 +382,8 @@ c---- starting from a previous solution in restart
         endif
         open(IN_RESTART_UNIT,file=restart(1:irestart),
      &    form='unformatted')
-        read(IN_RESTART_UNIT) nr2,nz2,nn2,dt1,tps1,
-     &    stage(1),stage(2),Bo1,Re1,Ro1,wf1,gama1,eta1
+        read(IN_RESTART_UNIT) nr2,nz2,nn2,dt1,time1,
+     &    stage(1),stage(2),Re1,Ro1,wf1,gama1
         if (nr2.ne.nr .or. nz2.ne.nz .or. nn2.ne.nn) then
           print*,'incorrect number of spectral modes in ',
      &         restart(1:irestart),' :'
@@ -699,7 +430,7 @@ c---- starting from solid-body rotation
 C     Start from rest with random perturbation in vr
 c       The factor of 10 adjust so the perturbation is of the order
 c       introduced, since the random number is between 0 and 1
-         tps=tinicial
+         time=tinicial
          if (imode.eq.0) then
            do j=0,nz
              do i=0,nr
@@ -725,13 +456,13 @@ c       introduced, since the random number is between 0 and 1
          endif
       elseif (ibegin.eq.1) then
 C     Continue restart solution, keep t.
-         tps=tps1
+         time=time1
       elseif (ibegin.eq.2) then
 C     Continue restart solution, set t=0.
-         tps=tinicial
+         time=tinicial
       elseif (ibegin.eq.3) then
 C     Continue restart solution with random perturbation, set t=0.
-         tps=tinicial
+         time=tinicial
          if (imode.eq.0) then
             do j=0,nz
                do i=0,nr
@@ -1108,19 +839,19 @@ c     lines with nl: advection term
 
 c=======================================================================
 
-      subroutine time_stepper(Bo,Re,Ro,wf,dt,pnu,rad,alt,
-     &     stage,tps,tdr,tir,tdi,tii,wk,dz1,dz2,nr,nz,nn,
-     &     dr1,lap,MM,Mtilde,ipiv1,ipiv2,z,r,ri,
+      subroutine time_stepper(Re,Ro,wf,dt,pnu,rad,alt,
+     &     stage,time,tdr,tir,tdi,tii,wk,dz1,dz2,nr,nz,nn,
+     &     dr1,lap,z,r,ri,
      &     axd,vxd,bxd,azd,vzd,bzd,axn,vxn,bxn,azn,vzn,bzn,
      &     cx01,cx03,cz01,cz02,cz03,cz11,cz12,cz13,
-     &     vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr,vs,i_eta)
+     &     vr,vt,vz,nlvr,nlvt,nlvz,rotvorz,rotvorr)
 c     stage(1) points to N, stage(2) points to N-1 on input, the opposite on output
       implicit none
-      integer nr,nz,nn,nnh,nnhp,nn1,nr1,nz1,i_eta
+      integer nr,nz,nn,nnh,nnhp,nn1,nr1,nz1
       integer stage(2),i,j,k,nrz,nrzt,nzt,n
       real*8  dz1(0:nz,0:nz),dr1(0:nr,0:nr,2)
       real*8  dz2(0:nz,0:nz)
-      real*8  lap(0:nr,0:nr,2),MM(0:nr,0:nr,2),Mtilde(1:nr-1,1:nr-1,2)
+      real*8  lap(0:nr,0:nr,2)
       real*8  z(0:nz),r(0:nr),ri(0:nr)
       real*8  axd(1:nr,1:nr,0:nn/2+1),vxd(1:nr,0:nn/2+1),
      &        bxd(1:nr,1:nr,0:nn/2+1),axn(1:nr,1:nr,0:nn/2+1),
@@ -1132,14 +863,13 @@ c     stage(1) points to N, stage(2) points to N-1 on input, the opposite on out
       real*8  tdr(0:nn-1,0:nn-1),tdi(0:nn-1,0:nn-1)
       real*8  tir(0:nn-1,0:nn-1),tii(0:nn-1,0:nn-1)
       real*8  vr(0:nr,0:nz,0:nn-1,2)
-      real*8  vt(0:nr,0:nz,0:nn-1,2),vz(0:nr,0:nz,0:nn-1,2),vs(0:nr)
+      real*8  vt(0:nr,0:nz,0:nn-1,2),vz(0:nr,0:nz,0:nn-1,2)
       real*8  nlvr(0:nr,0:nz,0:nn-1,2)
       real*8  nlvt(0:nr,0:nz,0:nn-1,2),nlvz(0:nr,0:nz,0:nn-1,2)
       real*8  rotvorz(0:nr,2,0:nn-1,2),rotvorr(0:nz,0:nn-1,2)
       real*8  wk(0:nr,0:nz,0:nn-1,6)
-      real*8  dt,pnu,rad,alt,tps,Bo,Re,Ro,wf
+      real*8  dt,pnu,rad,alt,time,Re,Ro,wf
       real*8  alpha,b,a
-      integer ipiv1(1:nr-1),ipiv2(1:nr-1)
 
       nnh=nn/2 ; nnhp=nnh+1 ; nn1=nn-1 ; nr1=nr+1 ; nz1=nz+1
       nrz=(nr+1)*(nz+1) ; nrzt=nrz*nn ; nzt=(nz+1)*nn
@@ -1335,9 +1065,8 @@ c
 c**************************************************************************
 
 c     boundary conditions for the velocity field
-      call bcvel(tps,r,wk(0,0,0,4),wk(0,0,0,6),wk(0,0,0,3),rad,alt,
-     &          nr,nz,nn,Bo,Re,Ro,wf,pnu,dz1,
-     &          MM,Mtilde,ipiv1,ipiv2,vs,i_eta)
+      call bcvel(time,r,wk(0,0,0,4),wk(0,0,0,6),wk(0,0,0,3),rad,alt,
+     &          nr,nz,nn,Re,Ro,wf,pnu,dz1)
 !$OMP PARALLEL
 !$OMP+SHARED(alpha,wk)
 !$OMP+PRIVATE(n,i)
@@ -2101,7 +1830,7 @@ C     Computing into the m-rotoreflection subspace
 
 c=======================================================================
 
-      subroutine tswrite(vr,vt,vz,tps,stage,npp,r,axx,azz,Ftr,ccr,
+      subroutine tswrite(vr,vt,vz,time,stage,npp,r,axx,azz,Ftr,ccr,
      &   ccz,h,h2,nr,nz,nn,nx,rad,pnu,Re)
       implicit none
       integer, parameter :: OUT_TS_UNIT      = 1001
@@ -2112,7 +1841,7 @@ c      integer, parameter :: OUT_TSTXT_UNIT   = 2001
       real*8  vr(0:nr,0:nz,0:nn-1,2), vt(0:nr,0:nz,0:nn-1,2)
       real*8  vz(0:nr,0:nz,0:nn-1,2), vze(0:nx,0:nz,0:nn-1)
       real*8  h(0:nr,0:nz,0:nn-1),h2(0:nr,0:nn-1)
-      real*8  ccr(0:2*nr+1),ccz(0:nz),tps,r(0:nr)
+      real*8  ccr(0:2*nr+1),ccz(0:nz),time,r(0:nr)
       real*8  Ftr(0:nn-1,10),axx(0:2*nr+1,10),azz(0:nz,10)
       real*8  rad,pnu,Re
       real*8  pvz(10),ddot,ekm(0:nn/2)
@@ -2233,9 +1962,9 @@ C     computing the kinetic energy in rotating frame
 !$OMP END DO
 !$OMP END PARALLEL
 C </Write Modal Energies and Probes Local Results> ---------------------------
-      write(OUT_TS_UNIT) tps, (ekm(i),i=0,nnh-1), (pvz(i),i=1,npp)
+      write(OUT_TS_UNIT) time, (ekm(i),i=0,nnh-1), (pvz(i),i=1,npp)
 c  134 format (ES23.15e3,2x,ES23.15e3,2x,ES23.15e3)
-c      write(OUT_TSTXT_UNIT,134) tps, (ekm(i),i=0,nnh-1),(pvz(i),i=1,npp)
+c      write(OUT_TSTXT_UNIT,134) time, (ekm(i),i=0,nnh-1),(pvz(i),i=1,npp)
 
       return
       end subroutine tswrite
